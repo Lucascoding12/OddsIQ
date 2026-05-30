@@ -37,12 +37,12 @@ export function BetLogTable({ bets }: Props) {
                   {bet.result}
                 </Badge>
               </td>
-              <td className={`px-4 py-3 text-right font-medium ${bet.pnl > 0 ? "text-green-600" : bet.pnl < 0 ? "text-red-500" : "text-muted-foreground"}`}>
-                {bet.pnl > 0 ? "+" : ""}{bet.pnl === 0 ? "-" : `$${bet.pnl.toFixed(2)}`}
+              <td className="px-4 py-3 text-right font-medium font-mono">
+                {bet.pnl === 0 ? "-" : `${bet.pnl > 0 ? "+" : ""}$${bet.pnl.toFixed(2)}`}
               </td>
               <td className="px-4 py-3 text-right text-muted-foreground">{formatOdds(bet.closingOdds)}</td>
-              <td className={`px-4 py-3 text-right font-medium ${bet.clv > 0 ? "text-green-600" : bet.clv < 0 ? "text-red-500" : "text-muted-foreground"}`}>
-                {bet.clv > 0 ? "+" : ""}{bet.clv === 0 ? "-" : `${bet.clv}`}
+              <td className="px-4 py-3 text-right font-medium text-muted-foreground">
+                {bet.clv === 0 ? "-" : `${bet.clv > 0 ? "+" : ""}${bet.clv}`}
               </td>
             </tr>
           ))}

@@ -14,7 +14,7 @@ export function ClvPanel({ bets }: Props) {
       <div className="grid grid-cols-3 gap-3 text-sm">
         <div className="rounded border px-3 py-2">
           <div className="text-xs text-muted-foreground">Avg CLV</div>
-          <div className={`text-xl font-bold ${avgClv >= 0 ? "text-green-600" : "text-red-500"}`}>
+          <div className={`text-xl font-bold ${avgClv >= 0 ? "text-blue-300" : "text-red-400"}`}>
             {avgClv >= 0 ? "+" : ""}{avgClv.toFixed(1)}
           </div>
         </div>
@@ -33,7 +33,7 @@ export function ClvPanel({ bets }: Props) {
         {settled.map((b) => (
           <div key={b.id} className="flex justify-between text-sm py-1 border-b last:border-0">
             <span className="text-muted-foreground">{b.game} — {b.betType}</span>
-            <span className={`font-medium ${b.clv > 0 ? "text-green-600" : "text-red-500"}`}>
+            <span className={`font-medium ${b.clv > 0 ? "text-blue-300" : "text-red-400"}`}>
               {b.clv > 0 ? "+" : ""}{b.clv} CLV
             </span>
           </div>

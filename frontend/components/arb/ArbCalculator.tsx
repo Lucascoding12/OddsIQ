@@ -62,13 +62,13 @@ export function ArbCalculator() {
       </div>
 
       {result && (
-        <div className={`rounded-lg border p-4 space-y-3 ${result.isArb ? "border-green-500 bg-green-50" : "border-red-400 bg-red-50"}`}>
-          <div className={`font-semibold ${result.isArb ? "text-green-700" : "text-red-600"}`}>
+        <div className={`rounded-lg border p-4 space-y-3 ${result.isArb ? "border-blue-500/40 bg-blue-500/5" : "border-red-500/40 bg-red-500/5"}`}>
+          <div className={`font-semibold ${result.isArb ? "text-blue-300" : "text-red-400"}`}>
             {result.isArb ? "Arbitrage Opportunity Found!" : "No Arbitrage — Books are not in your favor"}
           </div>
           <div className="grid grid-cols-2 gap-3 text-sm">
             <div><span className="text-muted-foreground">Implied probability total:</span> <span className="font-medium">{(result.impliedProb * 100).toFixed(2)}%</span></div>
-            <div><span className="text-muted-foreground">Guaranteed profit:</span> <span className={`font-medium ${result.isArb ? "text-green-700" : ""}`}>${result.profit.toFixed(2)}</span></div>
+            <div><span className="text-muted-foreground">Guaranteed profit:</span> <span className={`font-medium ${result.isArb ? "text-blue-300" : ""}`}>${result.profit.toFixed(2)}</span></div>
             <div><span className="text-muted-foreground">Stake on Leg 1 ({leg1.book || "Book 1"}):</span> <span className="font-medium">${result.stake1.toFixed(2)}</span></div>
             <div><span className="text-muted-foreground">Stake on Leg 2 ({leg2.book || "Book 2"}):</span> <span className="font-medium">${result.stake2.toFixed(2)}</span></div>
           </div>

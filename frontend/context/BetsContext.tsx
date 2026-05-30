@@ -1,22 +1,22 @@
 "use client"
 
 import { createContext, useContext, useState, ReactNode } from "react"
-import { Bet, MOCK_BETS } from "@/lib/mock-data"
+import { Bet } from "@/lib/mock-data"
 
 type BetsContextValue = {
   bets: Bet[]
-  addBet: (bet: Omit<Bet, "id" | "pnl" | "closingOdds" | "clv">) => void
+  addBet: (bet: Omit<Bet, "id" | "closingOdds" | "clv">) => void
   updateBet: (id: string, updates: Partial<Bet>) => void
 }
 
 const BetsContext = createContext<BetsContextValue | null>(null)
 
 export function BetsProvider({ children }: { children: ReactNode }) {
-  const [bets, setBets] = useState<Bet[]>(MOCK_BETS)
+  const [bets, setBets] = useState<Bet[]>([])
 
-  function addBet(data: Omit<Bet, "id" | "pnl" | "closingOdds" | "clv">) {
+  function addBet(data: Omit<Bet, "id" | "closingOdds" | "clv">) {
     setBets((prev) => [
-      { id: String(Date.now()), pnl: 0, closingOdds: data.odds, clv: 0, ...data },
+      { id: String(Date.now()), closingOdds: data.odds, clv: 0, ...data },
       ...prev,
     ])
   }

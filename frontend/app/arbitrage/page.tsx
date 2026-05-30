@@ -1,7 +1,9 @@
 import { ArbCalculator } from "@/components/arb/ArbCalculator"
+import { ProtectedRoute } from "@/components/ProtectedRoute"
 
 export default function ArbitragePage() {
   return (
+    <ProtectedRoute>
     <div className="space-y-6 max-w-2xl">
       <div>
         <h1 className="text-2xl font-bold">Arbitrage Calculator</h1>
@@ -20,5 +22,6 @@ export default function ArbitragePage() {
 
       <ArbCalculator />
     </div>
+    </ProtectedRoute>
   )
 }

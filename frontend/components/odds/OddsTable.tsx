@@ -2,10 +2,10 @@ import { Game } from "@/lib/mock-data"
 import { Button } from "@/components/ui/button"
 
 const SPORT_COLORS: Record<string, string> = {
-  NFL: "bg-amber-100 text-amber-800",
-  NBA: "bg-blue-100 text-blue-800",
-  MLB: "bg-red-100 text-red-800",
-  NHL: "bg-slate-100 text-slate-800",
+  NFL: "bg-slate-100 text-slate-600",
+  NBA: "bg-slate-100 text-slate-600",
+  MLB: "bg-slate-100 text-slate-600",
+  NHL: "bg-slate-100 text-slate-600",
 }
 
 function formatOdds(odds: number) {
@@ -40,17 +40,18 @@ export function OddsTable({ games }: Props) {
                   {game.sport}
                 </span>
               </td>
-              <td className="px-4 py-3 text-right">
-                <span className="text-green-600 font-medium">{formatOdds(game.bestLine.homeMoneyline)}</span>
+              <td className="px-4 py-3 text-right font-mono text-xs">
+                <span className="text-blue-300 font-medium">{formatOdds(game.bestLine.homeMoneyline)}</span>
                 {" / "}
-                <span>{formatOdds(game.bestLine.awayMoneyline)}</span>
+                <span className="text-muted-foreground">{formatOdds(game.bestLine.awayMoneyline)}</span>
               </td>
-              <td className="px-4 py-3 text-right">
+              <td className="px-4 py-3 text-right font-mono text-xs">
                 {game.bestLine.spread > 0 ? "+" : ""}{game.bestLine.spread}{" "}
-                ({formatOdds(game.bestLine.spreadOdds)})
+                <span className="text-muted-foreground">({formatOdds(game.bestLine.spreadOdds)})</span>
               </td>
-              <td className="px-4 py-3 text-right">
-                {game.bestLine.total} (O/U {formatOdds(game.bestLine.overOdds)})
+              <td className="px-4 py-3 text-right font-mono text-xs">
+                {game.bestLine.total}{" "}
+                <span className="text-muted-foreground">(O/U {formatOdds(game.bestLine.overOdds)})</span>
               </td>
               <td className="px-4 py-3 text-right text-muted-foreground text-xs">
                 {game.bestLine.book}

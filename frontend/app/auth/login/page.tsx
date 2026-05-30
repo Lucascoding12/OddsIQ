@@ -2,16 +2,23 @@
 
 import { useState } from "react"
 import Link from "next/link"
+import { useRouter, useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { useAuth } from "@/context/AuthContext"
 
 export default function LoginPage() {
   const [form, setForm] = useState({ email: "", password: "" })
+  const { login } = useAuth()
+  const router = useRouter()
+  const searchParams = useSearchParams()
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    alert("Auth not yet connected — coming in next phase")
+    login(form.email)
+    const next = searchParams.get("next") || "/odds"
+    router.push(next)
   }
 
   return (

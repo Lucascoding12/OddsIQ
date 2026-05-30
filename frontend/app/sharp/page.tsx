@@ -1,4 +1,5 @@
 "use client"
+import { ProtectedRoute } from "@/components/ProtectedRoute"
 
 import { ClvPanel } from "@/components/sharp/ClvPanel"
 import { LineMovementPanel } from "@/components/sharp/LineMovementPanel"
@@ -8,6 +9,7 @@ export default function SharpPage() {
   const { bets } = useBets()
 
   return (
+    <ProtectedRoute>
     <div className="space-y-6 max-w-3xl">
       <div>
         <h1 className="text-2xl font-bold">Sharp Metrics</h1>
@@ -16,5 +18,6 @@ export default function SharpPage() {
       <ClvPanel bets={bets} />
       <LineMovementPanel />
     </div>
+    </ProtectedRoute>
   )
 }
