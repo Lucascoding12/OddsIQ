@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>OddsIQ — Calculator Design Options</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'DM Sans', sans-serif; background: #e5e7eb; padding: 32px 20px; }
+.mono { font-family: 'IBM Plex Mono', monospace; }
+
+/* Tab switcher */
+.page-tabs { display: flex; gap: 8px; margin-bottom: 32px; }
+.page-tab { padding: 10px 24px; border-radius: 999px; border: none; cursor: pointer; font-family: 'DM Sans', sans-serif; font-size: 15px; font-weight: 600; transition: all .15s; }
+.page-tab.active { background: #111; color: #fff; }
+.page-tab:not(.active) { background: #fff; color: #555; }
+
+.design { display: none; }
+.design.active { display: block; }
+
+/* ─────────────────────────────────────────────
+   OPTION A — Blue Edge (Clean Blue Accent)
+───────────────────────────────────────────── */
+.a { background: #f0f4ff; min-height: 100vh; border-radius: 16px; padding: 0; overflow: hidden; }
+
+.a-nav { background: #fff; border-bottom: 1px solid #dde3f5; padding: 0 32px; display: flex; align-items: center; gap: 0; height: 56px; }
+.a-logo { font-size: 18px; font-weight: 700; color: #1e40af; letter-spacing: -0.5px; margin-right: 40px; }
+.a-nav a { font-size: 14px; font-weight: 500; color: #6b7280; padding: 0 14px; height: 56px; display: flex; align-items: center; border-bottom: 2px solid transparent; text-decoration: none; transition: all .15s; }
+.a-nav a.active { color: #1e40af; border-bottom-color: #1e40af; }
+.a-nav a:hover { color: #1e40af; }
+.a-nav-right { margin-left: auto; display: flex; gap: 8px; }
+.a-btn-ghost { padding: 6px 14px; border-radius: 6px; border: 1px solid #d1d9f0; background: none; font-size: 13px; font-weight: 500; cursor: pointer; color: #374151; }
+.a-btn { padding: 6px 14px; border-radius: 6px; background: #1e40af; color: #fff; border: none; font-size: 13px; font-weight: 600; cursor: pointer; }
+
+.a-body { padding: 32px; }
+.a-title { font-size: 26px; font-weight: 700; color: #111827; }
+.a-sub { font-size: 14px; color: #6b7280; margin-top: 4px; }
+
+.a-pills { display: flex; flex-wrap: wrap; gap: 8px; margin: 24px 0; }
+.a-pill { padding: 6px 14px; border-radius: 999px; border: 1.5px solid #dde3f5; background: #fff; font-size: 13px; font-weight: 500; color: #6b7280; cursor: pointer; transition: all .15s; }
+.a-pill.active { background: #1e40af; color: #fff; border-color: #1e40af; }
+.a-pill:hover:not(.active) { border-color: #93c5fd; color: #1e40af; }
+
+.a-card { background: #fff; border-radius: 12px; border: 1px solid #dde3f5; overflow: hidden; max-width: 520px; box-shadow: 0 1px 4px rgba(30,64,175,.06); }
+.a-card-header { background: #eff6ff; padding: 14px 20px; border-bottom: 1px solid #dde3f5; display: flex; align-items: center; gap: 10px; }
+.a-card-header-dot { width: 8px; height: 8px; border-radius: 50%; background: #1e40af; }
+.a-card-header h3 { font-size: 13px; font-weight: 600; color: #1e3a8a; }
+
+.a-table-header { display: grid; grid-template-columns: 1fr 1fr 1fr; padding: 10px 20px; background: #f8faff; border-bottom: 1px solid #e8edfa; }
+.a-table-header span { font-size: 11px; font-weight: 600; color: #6b7280; text-transform: uppercase; letter-spacing: .5px; }
+.a-table-header span:nth-child(2) { text-align: center; }
+.a-table-header span:nth-child(3) { text-align: right; }
+
+.a-row { display: grid; grid-template-columns: 1fr 1fr 1fr; padding: 14px 20px; border-bottom: 1px solid #f0f4ff; align-items: center; }
+.a-row:last-child { border: none; }
+.a-input { width: 100px; border: 1.5px solid #dde3f5; border-radius: 8px; padding: 8px 12px; font-family: 'IBM Plex Mono', monospace; font-size: 14px; color: #111; background: #f8faff; text-align: right; }
+.a-input:focus { outline: none; border-color: #93c5fd; background: #fff; }
+.a-val-center { text-align: center; font-family: 'IBM Plex Mono', monospace; font-size: 14px; font-weight: 500; color: #374151; }
+.a-val-right { text-align: right; font-family: 'IBM Plex Mono', monospace; font-size: 15px; font-weight: 600; color: #1e40af; }
+
+.a-card-footer { padding: 10px 20px; background: #f8faff; border-top: 1px solid #e8edfa; display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: #9ca3af; }
+.a-add { color: #1e40af; cursor: pointer; font-weight: 500; }
+
+.a-metrics { display: flex; gap: 24px; padding: 20px; border-top: 1px solid #e8edfa; background: #f8faff; }
+.a-metric label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .5px; color: #9ca3af; }
+.a-metric .val { font-family: 'IBM Plex Mono', monospace; font-size: 20px; font-weight: 700; color: #1e40af; margin-top: 2px; }
+.a-metric .val.neutral { color: #374151; }
+
+
+/* ─────────────────────────────────────────────
+   OPTION B — Emerald Pro (Rich green accent + warm white)
+───────────────────────────────────────────── */
+.b { background: #fafaf9; min-height: 100vh; border-radius: 16px; overflow: hidden; }
+
+.b-nav { background: #fff; border-bottom: 1px solid #e5e7eb; padding: 0 32px; display: flex; align-items: center; height: 56px; gap: 0; }
+.b-logo { font-size: 18px; font-weight: 700; color: #111; letter-spacing: -0.5px; margin-right: 40px; }
+.b-logo span { color: #059669; }
+.b-nav a { font-size: 14px; font-weight: 500; color: #6b7280; padding: 0 14px; height: 56px; display: flex; align-items: center; text-decoration: none; transition: all .15s; }
+.b-nav a.active { color: #059669; font-weight: 600; }
+.b-nav a:hover { color: #059669; }
+.b-nav-right { margin-left: auto; display: flex; gap: 8px; }
+.b-btn-ghost { padding: 6px 14px; border-radius: 6px; border: 1px solid #d1d5db; background: none; font-size: 13px; font-weight: 500; cursor: pointer; color: #374151; }
+.b-btn { padding: 6px 16px; border-radius: 6px; background: #059669; color: #fff; border: none; font-size: 13px; font-weight: 600; cursor: pointer; }
+
+.b-body { padding: 32px; }
+.b-title { font-size: 26px; font-weight: 700; color: #111; }
+.b-sub { font-size: 14px; color: #6b7280; margin-top: 4px; }
+
+.b-pills { display: flex; flex-wrap: wrap; gap: 8px; margin: 24px 0; }
+.b-pill { padding: 6px 14px; border-radius: 8px; border: 1px solid #e5e7eb; background: #fff; font-size: 13px; font-weight: 500; color: #6b7280; cursor: pointer; transition: all .15s; }
+.b-pill.active { background: #059669; color: #fff; border-color: #059669; font-weight: 600; }
+.b-pill:hover:not(.active) { border-color: #6ee7b7; color: #059669; background: #f0fdf4; }
+
+.b-card { background: #fff; border-radius: 12px; border: 1px solid #e5e7eb; overflow: hidden; max-width: 520px; box-shadow: 0 2px 8px rgba(0,0,0,.05); }
+.b-accent-bar { height: 4px; background: linear-gradient(90deg, #059669, #34d399); }
+
+.b-table-header { display: grid; grid-template-columns: 1fr 1fr 1fr; padding: 12px 20px; background: #f9fafb; border-bottom: 1px solid #f0fdf4; }
+.b-table-header span { font-size: 12px; font-weight: 600; color: #9ca3af; text-transform: uppercase; letter-spacing: .5px; }
+.b-table-header span:nth-child(2) { text-align: center; }
+.b-table-header span:nth-child(3) { text-align: right; }
+
+.b-row { display: grid; grid-template-columns: 1fr 1fr 1fr; padding: 14px 20px; border-bottom: 1px solid #f3f4f6; align-items: center; transition: background .1s; }
+.b-row:hover { background: #f9fafb; }
+.b-row:last-child { border: none; }
+.b-input { width: 100px; border: 1.5px solid #e5e7eb; border-radius: 8px; padding: 8px 12px; font-family: 'IBM Plex Mono', monospace; font-size: 14px; color: #111; background: #fff; text-align: right; }
+.b-input:focus { outline: none; border-color: #6ee7b7; box-shadow: 0 0 0 3px rgba(52,211,153,.1); }
+.b-val-center { text-align: center; font-family: 'IBM Plex Mono', monospace; font-size: 14px; font-weight: 500; color: #374151; }
+.b-val-right { text-align: right; font-family: 'IBM Plex Mono', monospace; font-size: 15px; font-weight: 700; color: #059669; }
+
+.b-card-footer { padding: 10px 20px; background: #f9fafb; border-top: 1px solid #f0f0f0; display: flex; justify-content: space-between; font-size: 12px; color: #9ca3af; }
+.b-add { color: #059669; cursor: pointer; font-weight: 500; }
+
+.b-metrics { display: flex; gap: 0; border-top: 1px solid #f0f0f0; }
+.b-metric { flex: 1; padding: 16px 20px; border-right: 1px solid #f0f0f0; }
+.b-metric:last-child { border: none; }
+.b-metric label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .5px; color: #9ca3af; }
+.b-metric .val { font-family: 'IBM Plex Mono', monospace; font-size: 22px; font-weight: 700; color: #059669; margin-top: 4px; }
+.b-metric .val.neutral { color: #111; }
+
+
+/* ─────────────────────────────────────────────
+   OPTION C — Violet Sharp (indigo/violet + off-white)
+───────────────────────────────────────────── */
+.c { background: #f5f4ff; min-height: 100vh; border-radius: 16px; overflow: hidden; }
+
+.c-nav { background: #fff; border-bottom: 1px solid #ede9fe; padding: 0 32px; display: flex; align-items: center; height: 56px; gap: 0; }
+.c-logo { font-size: 18px; font-weight: 700; color: #5b21b6; letter-spacing: -0.5px; margin-right: 40px; }
+.c-nav a { font-size: 14px; font-weight: 500; color: #6b7280; padding: 0 14px; height: 56px; display: flex; align-items: center; text-decoration: none; transition: all .15s; }
+.c-nav a.active { color: #7c3aed; font-weight: 600; background: #f5f3ff; }
+.c-nav a:hover { color: #7c3aed; }
+.c-nav-right { margin-left: auto; display: flex; gap: 8px; }
+.c-btn-ghost { padding: 6px 14px; border-radius: 6px; border: 1px solid #ddd6fe; background: none; font-size: 13px; font-weight: 500; cursor: pointer; color: #5b21b6; }
+.c-btn { padding: 6px 16px; border-radius: 6px; background: linear-gradient(135deg, #7c3aed, #6d28d9); color: #fff; border: none; font-size: 13px; font-weight: 600; cursor: pointer; box-shadow: 0 2px 6px rgba(124,58,237,.3); }
+
+.c-body { padding: 32px; }
+.c-title { font-size: 26px; font-weight: 700; color: #1f1235; }
+.c-sub { font-size: 14px; color: #7c6f99; margin-top: 4px; }
+
+.c-pills { display: flex; flex-wrap: wrap; gap: 8px; margin: 24px 0; }
+.c-pill { padding: 6px 14px; border-radius: 8px; border: 1.5px solid #ddd6fe; background: #fff; font-size: 13px; font-weight: 500; color: #6b7280; cursor: pointer; transition: all .15s; }
+.c-pill.active { background: linear-gradient(135deg, #7c3aed, #6d28d9); color: #fff; border-color: transparent; font-weight: 600; box-shadow: 0 2px 8px rgba(124,58,237,.25); }
+.c-pill:hover:not(.active) { border-color: #c4b5fd; color: #7c3aed; background: #faf5ff; }
+
+.c-card { background: #fff; border-radius: 14px; border: 1.5px solid #ede9fe; overflow: hidden; max-width: 520px; box-shadow: 0 4px 16px rgba(124,58,237,.08); }
+.c-card-header { background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%); padding: 16px 20px; }
+.c-card-header h3 { font-size: 14px; font-weight: 600; color: rgba(255,255,255,.9); }
+.c-card-header p { font-size: 12px; color: rgba(255,255,255,.6); margin-top: 2px; }
+
+.c-table-header { display: grid; grid-template-columns: 1fr 1fr 1fr; padding: 10px 20px; background: #faf5ff; border-bottom: 1px solid #ede9fe; }
+.c-table-header span { font-size: 11px; font-weight: 600; color: #8b5cf6; text-transform: uppercase; letter-spacing: .5px; }
+.c-table-header span:nth-child(2) { text-align: center; }
+.c-table-header span:nth-child(3) { text-align: right; }
+
+.c-row { display: grid; grid-template-columns: 1fr 1fr 1fr; padding: 14px 20px; border-bottom: 1px solid #f5f3ff; align-items: center; }
+.c-row:last-child { border: none; }
+.c-input { width: 100px; border: 1.5px solid #ddd6fe; border-radius: 8px; padding: 8px 12px; font-family: 'IBM Plex Mono', monospace; font-size: 14px; color: #1f1235; background: #faf5ff; text-align: right; }
+.c-input:focus { outline: none; border-color: #8b5cf6; box-shadow: 0 0 0 3px rgba(139,92,246,.15); }
+.c-val-center { text-align: center; font-family: 'IBM Plex Mono', monospace; font-size: 14px; font-weight: 500; color: #374151; }
+.c-val-right { text-align: right; font-family: 'IBM Plex Mono', monospace; font-size: 15px; font-weight: 700; color: #7c3aed; }
+
+.c-card-footer { padding: 10px 20px; background: #faf5ff; border-top: 1px solid #ede9fe; display: flex; justify-between: space-between; justify-content: space-between; font-size: 12px; color: #9ca3af; }
+.c-add { color: #7c3aed; cursor: pointer; font-weight: 500; }
+
+.c-metrics { display: flex; gap: 0; border-top: 1px solid #ede9fe; }
+.c-metric { flex: 1; padding: 18px 20px; border-right: 1px solid #ede9fe; background: #faf5ff; }
+.c-metric:last-child { border: none; }
+.c-metric label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .5px; color: #8b5cf6; }
+.c-metric .val { font-family: 'IBM Plex Mono', monospace; font-size: 22px; font-weight: 700; color: #7c3aed; margin-top: 4px; }
+.c-metric .val.neutral { color: #1f1235; }
+
+/* badge label */
+.badge { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 600; }
+.badge-green { background: #dcfce7; color: #15803d; }
+.badge-blue { background: #dbeafe; color: #1d4ed8; }
+.badge-violet { background: #ede9fe; color: #6d28d9; }
+</style>
+</head>
+<body>
+
+<div class="page-tabs">
+  <button class="page-tab active" onclick="switchTab('a', this)">A — Blue Edge</button>
+  <button class="page-tab" onclick="switchTab('b', this)">B — Emerald Pro</button>
+  <button class="page-tab" onclick="switchTab('c', this)">C — Violet Sharp</button>
+</div>
+
+<!-- ══════════════════════════════════════════
+     OPTION A — Blue Edge
+══════════════════════════════════════════ -->
+<div id="design-a" class="design active">
+<div class="a">
+  <nav class="a-nav">
+    <span class="a-logo">OddsIQ</span>
+    <a href="#">Odds Board</a>
+    <a href="#">Line Shopping</a>
+    <a href="#">Alerts</a>
+    <a href="#">PnL</a>
+    <a href="#">Arbitrage</a>
+    <a href="#">Sharp Metrics</a>
+    <a href="#" class="active">Calculator</a>
+    <div class="a-nav-right">
+      <button class="a-btn-ghost">Log in</button>
+      <button class="a-btn">Sign up</button>
+    </div>
+  </nav>
+
+  <div class="a-body">
+    <div class="a-title">No-Vig Fair Odds Calculator</div>
+    <div class="a-sub">Strip the sportsbook margin to find the true fair odds for each side.</div>
+
+    <div class="a-pills">
+      <span class="a-pill">Implied Probability Calculator</span>
+      <span class="a-pill active">No-Vig Fair Odds Calculator</span>
+      <span class="a-pill">Expected Value Calculator</span>
+      <span class="a-pill">Kelly Criterion Calculator</span>
+      <span class="a-pill">Arbitrage Calculator</span>
+      <span class="a-pill">CLV Calculator</span>
+      <span class="a-pill">Hold Calculator</span>
+      <span class="a-pill">Vig Calculator</span>
+      <span class="a-pill">Bonus Bet Calculator</span>
+      <span class="a-pill">Odds Converter Calculator</span>
+      <span class="a-pill">Parlay Calculator</span>
+      <span class="a-pill">Prediction Market Calculator</span>
+      <span class="a-pill">Point Spread Calculator</span>
+      <span class="a-pill">Poisson Calculator</span>
+      <span class="a-pill">Round Robin Calculator</span>
+    </div>
+
+    <div class="a-card">
+      <div class="a-card-header">
+        <div class="a-card-header-dot"></div>
+        <h3>No-Vig Fair Odds</h3>
+      </div>
+      <div class="a-table-header">
+        <span>Odds</span><span>No-Vig %</span><span>No-Vig Odds</span>
+      </div>
+      <div class="a-row"><input class="a-input mono" value="+110" /><div class="a-val-center mono">50.00%</div><div class="a-val-right mono">+100</div></div>
+      <div class="a-row"><input class="a-input mono" value="+110" /><div class="a-val-center mono">50.00%</div><div class="a-val-right mono">+100</div></div>
+      <div class="a-card-footer">
+        <span class="a-add">+ Add side</span>
+        <span>Hold: <b class="mono">-4.76%</b></span>
+      </div>
+    </div>
+
+    <br />
+
+    <!-- EV preview for A -->
+    <div class="a-card" style="margin-top:16px">
+      <div class="a-card-header">
+        <div class="a-card-header-dot"></div>
+        <h3>Expected Value Calculator</h3>
+      </div>
+      <div style="padding: 4px 0;">
+        <div class="a-row" style="grid-template-columns: 1fr auto;">
+          <span style="font-size:14px;color:#6b7280;">Wager</span>
+          <div style="display:flex;align-items:center;gap:4px;"><span style="font-size:14px;color:#9ca3af;">$</span><input class="a-input mono" value="100" style="width:100px;" /></div>
+        </div>
+        <div class="a-row" style="grid-template-columns: 1fr auto;">
+          <span style="font-size:14px;color:#6b7280;">Odds</span>
+          <input class="a-input mono" value="+110" style="width:100px;" />
+        </div>
+        <div class="a-row" style="grid-template-columns: 1fr auto;border:none;">
+          <span style="font-size:14px;color:#6b7280;">Win Probability</span>
+          <div style="display:flex;align-items:center;gap:4px;"><input class="a-input mono" value="60" style="width:100px;" /><span style="font-size:14px;color:#9ca3af;">%</span></div>
+        </div>
+      </div>
+      <div class="a-metrics">
+        <div class="a-metric"><label>Expected Value</label><div class="val mono">+$26.00</div></div>
+        <div class="a-metric"><label>ROI</label><div class="val mono">26.00%</div></div>
+        <div class="a-metric"><label>Profit if Win</label><div class="val neutral mono">$110.00</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     OPTION B — Emerald Pro
+══════════════════════════════════════════ -->
+<div id="design-b" class="design">
+<div class="b">
+  <nav class="b-nav">
+    <span class="b-logo">Odds<span>IQ</span></span>
+    <a href="#">Odds Board</a>
+    <a href="#">Line Shopping</a>
+    <a href="#">Alerts</a>
+    <a href="#">PnL</a>
+    <a href="#">Arbitrage</a>
+    <a href="#">Sharp Metrics</a>
+    <a href="#" class="active">Calculator</a>
+    <div class="b-nav-right">
+      <button class="b-btn-ghost">Log in</button>
+      <button class="b-btn">Sign up</button>
+    </div>
+  </nav>
+
+  <div class="b-body">
+    <div class="b-title">No-Vig Fair Odds Calculator</div>
+    <div class="b-sub">Strip the sportsbook margin to find the true fair odds for each side.</div>
+
+    <div class="b-pills">
+      <span class="b-pill">Implied Probability Calculator</span>
+      <span class="b-pill active">No-Vig Fair Odds Calculator</span>
+      <span class="b-pill">Expected Value Calculator</span>
+      <span class="b-pill">Kelly Criterion Calculator</span>
+      <span class="b-pill">Arbitrage Calculator</span>
+      <span class="b-pill">CLV Calculator</span>
+      <span class="b-pill">Hold Calculator</span>
+      <span class="b-pill">Vig Calculator</span>
+      <span class="b-pill">Bonus Bet Calculator</span>
+      <span class="b-pill">Odds Converter Calculator</span>
+      <span class="b-pill">Parlay Calculator</span>
+      <span class="b-pill">Prediction Market Calculator</span>
+      <span class="b-pill">Point Spread Calculator</span>
+      <span class="b-pill">Poisson Calculator</span>
+      <span class="b-pill">Round Robin Calculator</span>
+    </div>
+
+    <div class="b-card">
+      <div class="b-accent-bar"></div>
+      <div class="b-table-header">
+        <span>Odds</span><span>No-Vig %</span><span>No-Vig Odds</span>
+      </div>
+      <div class="b-row"><input class="b-input mono" value="+110" /><div class="b-val-center mono">50.00%</div><div class="b-val-right mono">+100</div></div>
+      <div class="b-row"><input class="b-input mono" value="+110" /><div class="b-val-center mono">50.00%</div><div class="b-val-right mono">+100</div></div>
+      <div class="b-card-footer">
+        <span class="b-add">+ Add side</span>
+        <span>Hold: <b class="mono">-4.76%</b></span>
+      </div>
+    </div>
+
+    <br />
+
+    <div class="b-card" style="margin-top:16px">
+      <div class="b-accent-bar"></div>
+      <div style="padding: 4px 0;">
+        <div class="b-row" style="grid-template-columns: 1fr auto;">
+          <span style="font-size:14px;color:#6b7280;">Wager</span>
+          <div style="display:flex;align-items:center;gap:4px;"><span style="font-size:14px;color:#9ca3af;">$</span><input class="b-input mono" value="100" style="width:100px;" /></div>
+        </div>
+        <div class="b-row" style="grid-template-columns: 1fr auto;">
+          <span style="font-size:14px;color:#6b7280;">Odds</span>
+          <input class="b-input mono" value="+110" style="width:100px;" />
+        </div>
+        <div class="b-row" style="grid-template-columns: 1fr auto;border:none;">
+          <span style="font-size:14px;color:#6b7280;">Win Probability</span>
+          <div style="display:flex;align-items:center;gap:4px;"><input class="b-input mono" value="60" style="width:100px;" /><span style="font-size:14px;color:#9ca3af;">%</span></div>
+        </div>
+      </div>
+      <div class="b-metrics">
+        <div class="b-metric"><label>Expected Value</label><div class="val mono">+$26.00</div></div>
+        <div class="b-metric"><label>ROI</label><div class="val mono">26.00%</div></div>
+        <div class="b-metric"><label>Profit if Win</label><div class="val neutral mono">$110.00</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     OPTION C — Violet Sharp
+══════════════════════════════════════════ -->
+<div id="design-c" class="design">
+<div class="c">
+  <nav class="c-nav">
+    <span class="c-logo">OddsIQ</span>
+    <a href="#">Odds Board</a>
+    <a href="#">Line Shopping</a>
+    <a href="#">Alerts</a>
+    <a href="#">PnL</a>
+    <a href="#">Arbitrage</a>
+    <a href="#">Sharp Metrics</a>
+    <a href="#" class="active">Calculator</a>
+    <div class="c-nav-right">
+      <button class="c-btn-ghost">Log in</button>
+      <button class="c-btn">Sign up</button>
+    </div>
+  </nav>
+
+  <div class="c-body">
+    <div class="c-title">No-Vig Fair Odds Calculator</div>
+    <div class="c-sub">Strip the sportsbook margin to find the true fair odds for each side.</div>
+
+    <div class="c-pills">
+      <span class="c-pill">Implied Probability Calculator</span>
+      <span class="c-pill active">No-Vig Fair Odds Calculator</span>
+      <span class="c-pill">Expected Value Calculator</span>
+      <span class="c-pill">Kelly Criterion Calculator</span>
+      <span class="c-pill">Arbitrage Calculator</span>
+      <span class="c-pill">CLV Calculator</span>
+      <span class="c-pill">Hold Calculator</span>
+      <span class="c-pill">Vig Calculator</span>
+      <span class="c-pill">Bonus Bet Calculator</span>
+      <span class="c-pill">Odds Converter Calculator</span>
+      <span class="c-pill">Parlay Calculator</span>
+      <span class="c-pill">Prediction Market Calculator</span>
+      <span class="c-pill">Point Spread Calculator</span>
+      <span class="c-pill">Poisson Calculator</span>
+      <span class="c-pill">Round Robin Calculator</span>
+    </div>
+
+    <div class="c-card">
+      <div class="c-card-header">
+        <h3>No-Vig Fair Odds</h3>
+        <p>Enter American odds for each side below</p>
+      </div>
+      <div class="c-table-header">
+        <span>Odds</span><span>No-Vig %</span><span>No-Vig Odds</span>
+      </div>
+      <div class="c-row"><input class="c-input mono" value="+110" /><div class="c-val-center mono">50.00%</div><div class="c-val-right mono">+100</div></div>
+      <div class="c-row"><input class="c-input mono" value="+110" /><div class="c-val-center mono">50.00%</div><div class="c-val-right mono">+100</div></div>
+      <div class="c-card-footer">
+        <span class="c-add">+ Add side</span>
+        <span>Hold: <b class="mono">-4.76%</b></span>
+      </div>
+      <div class="c-metrics">
+        <div class="c-metric"><label>Side 1</label><div class="val mono">+100</div></div>
+        <div class="c-metric"><label>Side 2</label><div class="val mono">+100</div></div>
+        <div class="c-metric"><label>Sportsbook Hold</label><div class="val neutral mono">-4.76%</div></div>
+      </div>
+    </div>
+
+    <br />
+
+    <div class="c-card" style="margin-top:16px">
+      <div class="c-card-header">
+        <h3>Expected Value Calculator</h3>
+        <p>Calculate edge from your true probability estimate</p>
+      </div>
+      <div style="padding: 4px 0;">
+        <div class="c-row" style="grid-template-columns: 1fr auto;">
+          <span style="font-size:14px;color:#7c6f99;">Wager</span>
+          <div style="display:flex;align-items:center;gap:4px;"><span style="font-size:14px;color:#c4b5fd;">$</span><input class="c-input mono" value="100" style="width:100px;" /></div>
+        </div>
+        <div class="c-row" style="grid-template-columns: 1fr auto;">
+          <span style="font-size:14px;color:#7c6f99;">Odds</span>
+          <input class="c-input mono" value="+110" style="width:100px;" />
+        </div>
+        <div class="c-row" style="grid-template-columns: 1fr auto;border:none;">
+          <span style="font-size:14px;color:#7c6f99;">Win Probability</span>
+          <div style="display:flex;align-items:center;gap:4px;"><input class="c-input mono" value="60" style="width:100px;" /><span style="font-size:14px;color:#c4b5fd;">%</span></div>
+        </div>
+      </div>
+      <div class="c-metrics">
+        <div class="c-metric"><label>Expected Value</label><div class="val mono">+$26.00</div></div>
+        <div class="c-metric"><label>ROI</label><div class="val mono">26.00%</div></div>
+        <div class="c-metric"><label>Profit if Win</label><div class="val neutral mono">$110.00</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<script>
+function switchTab(id, btn) {
+  document.querySelectorAll('.design').forEach(d => d.classList.remove('active'))
+  document.querySelectorAll('.page-tab').forEach(b => b.classList.remove('active'))
+  document.getElementById('design-' + id).classList.add('active')
+  btn.classList.add('active')
+}
+</script>
+</body>
+</html>

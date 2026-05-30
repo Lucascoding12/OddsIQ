@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>OddsIQ — Design Options</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'DM Sans',system-ui,sans-serif;background:#111;color:#fff}
+
+.switcher{display:flex;gap:6px;padding:10px 16px;background:#111;border-bottom:1px solid #2a2a2a;position:sticky;top:0;z-index:100}
+.sw-btn{padding:5px 16px;border-radius:5px;cursor:pointer;font-size:11px;font-weight:600;border:1px solid #333;color:#666;background:#1a1a1a;letter-spacing:.3px;font-family:'DM Sans',sans-serif}
+.sw-btn.active{background:#fff;color:#000;border-color:#fff}
+.panel{display:none}.panel.active{display:block}
+
+/* ═══ SHARED ODDS GRID ═══ */
+.odds-grid{display:grid;grid-template-columns:90px repeat(5,1fr)}
+.odds-col-hdr{padding:7px 6px;text-align:center;font-size:9px;font-weight:600;letter-spacing:.8px;text-transform:uppercase;border-right:1px solid var(--border);border-bottom:1px solid var(--border);background:var(--sub-bg)}
+.odds-row-lbl{padding:9px 6px 9px 14px;font-size:9px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;border-right:1px solid var(--border);border-bottom:1px solid var(--border);display:flex;align-items:center;background:var(--sub-bg)}
+.odds-cell{padding:9px 6px;text-align:center;border-right:1px solid var(--border);border-bottom:1px solid var(--border);cursor:pointer;transition:background .1s}
+.odds-cell:hover{background:var(--hover)}
+.odds-num{font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:500;color:var(--num)}
+.odds-num.best{color:var(--best);font-weight:600}
+.odds-num.worst{color:var(--worst)}
+
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+.dot{width:5px;height:5px;border-radius:50%;animation:pulse 2s infinite}
+
+/* ══════════════════════════════════════════════
+   A — PROFESSIONAL LIGHT
+══════════════════════════════════════════════ */
+#pa{
+  --border:#e8eaed;
+  --sub-bg:#f8f9fa;
+  --hover:#f0f4ff;
+  --num:#374151;
+  --best:#166534;
+  --worst:#9ca3af;
+  --muted:#9ca3af;
+  background:#f1f3f5;min-height:100vh
+}
+.a-nav{background:#1c2333;display:flex;align-items:center;justify-content:space-between;padding:0 22px;height:50px}
+.a-logo{font-size:15px;font-weight:700;color:#fff;letter-spacing:-.2px;display:flex;align-items:center;gap:9px}
+.a-logo-mark{width:24px;height:24px;background:#2d5a27;border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#4ade80}
+.a-nav-links{display:flex}
+.a-nl{padding:5px 12px;font-size:12px;font-weight:500;color:#8892a4;cursor:pointer;border-radius:4px}
+.a-nl.act{color:#fff;background:#ffffff12}
+.a-nl:hover:not(.act){color:#c5cdd9}
+.a-nav-r{display:flex;gap:7px}
+.a-btn-l{padding:5px 13px;font-size:11px;font-weight:600;color:#8892a4;background:none;border:1px solid #2e3a4e;border-radius:5px;cursor:pointer;font-family:'DM Sans',sans-serif}
+.a-btn-s{padding:5px 13px;font-size:11px;font-weight:700;color:#fff;background:#2d5a27;border:none;border-radius:5px;cursor:pointer;font-family:'DM Sans',sans-serif}
+.a-sub{background:#242d3e;display:flex;align-items:center;gap:1px;padding:0 22px;height:34px;border-bottom:1px solid #1a2233}
+.a-sl{padding:3px 11px;font-size:10px;font-weight:600;color:#5c6880;cursor:pointer;border-radius:3px;letter-spacing:.2px}
+.a-sl.act{color:#a8d5a2;background:#2d5a2722}
+.a-sl:hover:not(.act){color:#8892a4}
+.a-main{padding:16px 22px}
+.a-topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.a-title{font-size:16px;font-weight:700;color:#111827}
+.a-live{display:flex;align-items:center;gap:5px;font-size:10px;font-weight:600;color:#166534;background:#f0fdf4;border:1px solid #bbf7d0;padding:3px 10px;border-radius:4px}
+.a-live .dot{background:#16a34a}
+.a-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px}
+.a-stat{background:#fff;border:1px solid #e8eaed;border-radius:7px;padding:11px 15px}
+.a-stat-lbl{font-size:9px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:.6px}
+.a-stat-val{font-size:20px;font-weight:700;font-family:'IBM Plex Mono',monospace;color:#111827;margin-top:5px}
+.a-stat-val.pos{color:#166534}
+.a-stat-val.neg{color:#dc2626}
+.a-stat-sub{font-size:9px;color:#d1d5db;margin-top:2px}
+.a-filters{display:flex;gap:5px;margin-bottom:12px;align-items:center}
+.a-sep{width:1px;height:16px;background:#e8eaed;margin:0 3px}
+.a-chip{padding:4px 12px;border-radius:4px;font-size:10px;font-weight:600;cursor:pointer;border:1px solid #e8eaed;color:#6b7280;background:#fff;letter-spacing:.2px}
+.a-chip.on{background:#1c2333;color:#fff;border-color:#1c2333}
+.a-chip:hover:not(.on){border-color:#d1d5db;color:#374151}
+.a-games{display:flex;flex-direction:column;gap:6px}
+.a-card{background:#fff;border:1px solid #e8eaed;border-radius:7px;overflow:hidden}
+.a-card-hdr{display:flex;align-items:center;padding:9px 14px;border-bottom:1px solid #f3f4f6;gap:9px}
+.a-sport{font-size:8px;font-weight:700;letter-spacing:1px;padding:2px 6px;border-radius:3px;text-transform:uppercase;background:#f3f4f6;color:#6b7280}
+.a-game-title{font-size:12px;font-weight:600;color:#111827;flex:1}
+.a-game-time{font-size:9px;color:#d1d5db;font-weight:500;font-family:'IBM Plex Mono',monospace}
+.a-alert{width:22px;height:22px;border-radius:4px;border:1px solid #e8eaed;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#d1d5db;font-size:10px}
+.a-alert:hover{border-color:#166534;color:#166534}
+
+/* ══════════════════════════════════════════════
+   B — SLATE DARK
+══════════════════════════════════════════════ */
+#pb{
+  --border:#1e2535;
+  --sub-bg:#0d1020;
+  --hover:#151a2a;
+  --num:#8892a4;
+  --best:#4ade80;
+  --worst:#374151;
+  --muted:#3d4a5c;
+  background:#0a0d18;min-height:100vh
+}
+.b-nav{background:#0a0d18;display:flex;align-items:center;justify-content:space-between;padding:0 22px;height:50px;border-bottom:1px solid #131726}
+.b-logo{font-size:15px;font-weight:700;color:#fff;letter-spacing:-.2px;display:flex;align-items:center;gap:9px}
+.b-logo-mark{width:24px;height:24px;background:#0d2818;border:1px solid #1a4a2e;border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#4ade80}
+.b-nav-links{display:flex}
+.b-nl{padding:5px 12px;font-size:12px;font-weight:500;color:#3d4a5c;cursor:pointer;border-radius:4px}
+.b-nl.act{color:#c5cdd9;background:#ffffff08}
+.b-nl:hover:not(.act){color:#8892a4}
+.b-nav-r{display:flex;gap:7px}
+.b-btn-l{padding:5px 13px;font-size:11px;font-weight:600;color:#4d5a6e;background:none;border:1px solid #1e2535;border-radius:5px;cursor:pointer;font-family:'DM Sans',sans-serif}
+.b-btn-s{padding:5px 13px;font-size:11px;font-weight:700;color:#4ade80;background:#0d2818;border:1px solid #1a4a2e;border-radius:5px;cursor:pointer;font-family:'DM Sans',sans-serif}
+.b-sub{background:#0a0d18;display:flex;align-items:center;gap:1px;padding:0 22px;height:34px;border-bottom:1px solid #131726}
+.b-sl{padding:3px 11px;font-size:10px;font-weight:600;color:#2e3a4e;cursor:pointer;border-radius:3px;letter-spacing:.2px}
+.b-sl.act{color:#4ade80;background:#0d281810}
+.b-sl:hover:not(.act){color:#5c6880}
+.b-main{padding:16px 22px}
+.b-topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.b-title{font-size:16px;font-weight:700;color:#c5cdd9}
+.b-live{display:flex;align-items:center;gap:5px;font-size:10px;font-weight:600;color:#4ade80;background:#0d281820;border:1px solid #1a4a2e;padding:3px 10px;border-radius:4px}
+.b-live .dot{background:#4ade80}
+.b-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px}
+.b-stat{background:#0d1020;border:1px solid #1e2535;border-radius:7px;padding:11px 15px}
+.b-stat-lbl{font-size:9px;font-weight:700;color:#2e3a4e;text-transform:uppercase;letter-spacing:.6px}
+.b-stat-val{font-size:20px;font-weight:700;font-family:'IBM Plex Mono',monospace;color:#8892a4;margin-top:5px}
+.b-stat-val.pos{color:#4ade80}
+.b-stat-val.neg{color:#f87171}
+.b-stat-sub{font-size:9px;color:#1e2535;margin-top:2px}
+.b-filters{display:flex;gap:5px;margin-bottom:12px;align-items:center}
+.b-sep{width:1px;height:16px;background:#1e2535;margin:0 3px}
+.b-chip{padding:4px 12px;border-radius:4px;font-size:10px;font-weight:600;cursor:pointer;border:1px solid #1e2535;color:#3d4a5c;background:#0d1020;letter-spacing:.2px}
+.b-chip.on{background:#0d2818;color:#4ade80;border-color:#1a4a2e}
+.b-chip:hover:not(.on){border-color:#2e3a4e;color:#8892a4}
+.b-games{display:flex;flex-direction:column;gap:6px}
+.b-card{background:#0d1020;border:1px solid #1e2535;border-radius:7px;overflow:hidden}
+.b-card-hdr{display:flex;align-items:center;padding:9px 14px;border-bottom:1px solid #131726;gap:9px}
+.b-sport{font-size:8px;font-weight:700;letter-spacing:1px;padding:2px 6px;border-radius:3px;text-transform:uppercase;background:#131726;color:#2e3a4e}
+.b-game-title{font-size:12px;font-weight:600;color:#8892a4;flex:1}
+.b-game-time{font-size:9px;color:#2e3a4e;font-weight:500;font-family:'IBM Plex Mono',monospace}
+.b-alert{width:22px;height:22px;border-radius:4px;border:1px solid #1e2535;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#2e3a4e;font-size:10px}
+.b-alert:hover{border-color:#1a4a2e;color:#4ade80}
+
+/* ══════════════════════════════════════════════
+   C — WARM CHARCOAL
+══════════════════════════════════════════════ */
+#pc{
+  --border:#242424;
+  --sub-bg:#161616;
+  --hover:#1c1c1c;
+  --num:#787878;
+  --best:#d1fae5;
+  --worst:#333;
+  --muted:#444;
+  background:#111;min-height:100vh
+}
+.c-nav{background:#0e0e0e;display:flex;align-items:center;justify-content:space-between;padding:0 22px;height:50px;border-bottom:1px solid #1e1e1e}
+.c-logo{font-size:15px;font-weight:700;color:#e5e5e5;letter-spacing:-.2px;display:flex;align-items:center;gap:9px}
+.c-logo-mark{width:24px;height:24px;background:#1a1a1a;border:1px solid #2a2a2a;border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#a3a3a3}
+.c-nav-links{display:flex}
+.c-nl{padding:5px 12px;font-size:12px;font-weight:500;color:#444;cursor:pointer;border-radius:4px}
+.c-nl.act{color:#e5e5e5;background:#ffffff08}
+.c-nl:hover:not(.act){color:#888}
+.c-nav-r{display:flex;gap:7px}
+.c-btn-l{padding:5px 13px;font-size:11px;font-weight:600;color:#555;background:none;border:1px solid #222;border-radius:5px;cursor:pointer;font-family:'DM Sans',sans-serif}
+.c-btn-s{padding:5px 13px;font-size:11px;font-weight:700;color:#e5e5e5;background:#1a1a1a;border:1px solid #2a2a2a;border-radius:5px;cursor:pointer;font-family:'DM Sans',sans-serif}
+.c-sub{background:#0e0e0e;display:flex;align-items:center;gap:1px;padding:0 22px;height:34px;border-bottom:1px solid #1e1e1e}
+.c-sl{padding:3px 11px;font-size:10px;font-weight:600;color:#333;cursor:pointer;border-radius:3px;letter-spacing:.2px}
+.c-sl.act{color:#d1fae5;background:#1a2a1a}
+.c-sl:hover:not(.act){color:#666}
+.c-main{padding:16px 22px}
+.c-topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.c-title{font-size:16px;font-weight:700;color:#d4d4d4}
+.c-live{display:flex;align-items:center;gap:5px;font-size:10px;font-weight:600;color:#6b7280;background:#161616;border:1px solid #242424;padding:3px 10px;border-radius:4px}
+.c-live .dot{background:#4b5563}
+.c-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px}
+.c-stat{background:#161616;border:1px solid #222;border-radius:7px;padding:11px 15px}
+.c-stat-lbl{font-size:9px;font-weight:700;color:#444;text-transform:uppercase;letter-spacing:.6px}
+.c-stat-val{font-size:20px;font-weight:700;font-family:'IBM Plex Mono',monospace;color:#787878;margin-top:5px}
+.c-stat-val.pos{color:#d1fae5}
+.c-stat-val.neg{color:#7f1d1d}
+.c-stat-sub{font-size:9px;color:#333;margin-top:2px}
+.c-filters{display:flex;gap:5px;margin-bottom:12px;align-items:center}
+.c-sep{width:1px;height:16px;background:#222;margin:0 3px}
+.c-chip{padding:4px 12px;border-radius:4px;font-size:10px;font-weight:600;cursor:pointer;border:1px solid #222;color:#444;background:#161616;letter-spacing:.2px}
+.c-chip.on{background:#1a2a1a;color:#d1fae5;border-color:#2a3a2a}
+.c-chip:hover:not(.on){border-color:#333;color:#888}
+.c-games{display:flex;flex-direction:column;gap:6px}
+.c-card{background:#161616;border:1px solid #222;border-radius:7px;overflow:hidden}
+.c-card-hdr{display:flex;align-items:center;padding:9px 14px;border-bottom:1px solid #1e1e1e;gap:9px}
+.c-sport{font-size:8px;font-weight:700;letter-spacing:1px;padding:2px 6px;border-radius:3px;text-transform:uppercase;background:#1a1a1a;color:#444}
+.c-game-title{font-size:12px;font-weight:600;color:#787878;flex:1}
+.c-game-time{font-size:9px;color:#333;font-weight:500;font-family:'IBM Plex Mono',monospace}
+.c-alert{width:22px;height:22px;border-radius:4px;border:1px solid #222;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#333;font-size:10px}
+.c-alert:hover{border-color:#2a3a2a;color:#d1fae5}
+</style>
+</head>
+<body>
+
+<div class="switcher">
+  <button class="sw-btn active" onclick="show('a',this)">A — Professional Light</button>
+  <button class="sw-btn" onclick="show('b',this)">B — Slate Dark</button>
+  <button class="sw-btn" onclick="show('c',this)">C — Warm Charcoal</button>
+</div>
+
+<!-- ══ THEME A ══ -->
+<div class="panel active" id="pa">
+  <nav class="a-nav">
+    <div class="a-logo"><div class="a-logo-mark">OI</div>OddsIQ</div>
+    <div class="a-nav-links">
+      <div class="a-nl act">Odds Board</div><div class="a-nl">Line Shopping</div><div class="a-nl">Alerts</div><div class="a-nl">PnL</div><div class="a-nl">Arbitrage</div><div class="a-nl">Sharp</div>
+    </div>
+    <div class="a-nav-r"><button class="a-btn-l">Log in</button><button class="a-btn-s">Get Access</button></div>
+  </nav>
+  <div class="a-sub">
+    <div class="a-sl act">Moneyline</div><div class="a-sl">Spread</div><div class="a-sl">Total</div><div class="a-sl">1H</div><div class="a-sl">Props</div>
+  </div>
+  <div class="a-main">
+    <div class="a-topbar">
+      <div style="font-size:16px;font-weight:700;color:#111827">Odds Board</div>
+      <div class="a-live"><div class="dot"></div>Live — 83 books</div>
+    </div>
+    <div class="a-stats">
+      <div class="a-stat"><div class="a-stat-lbl">Total PnL</div><div class="a-stat-val pos">+$81.89</div><div class="a-stat-sub">+$12.40 today</div></div>
+      <div class="a-stat"><div class="a-stat-lbl">Win Rate</div><div class="a-stat-val">66.7%</div><div class="a-stat-sub">4W · 2L · 1 Pending</div></div>
+      <div class="a-stat"><div class="a-stat-lbl">Avg CLV</div><div class="a-stat-val pos">+7.3</div><div class="a-stat-sub">Beating closing line</div></div>
+      <div class="a-stat"><div class="a-stat-lbl">Open Alerts</div><div class="a-stat-val" style="color:#6b7280">1</div><div class="a-stat-sub">0 triggered today</div></div>
+    </div>
+    <div class="a-filters">
+      <div class="a-chip on">All</div><div class="a-chip">NFL</div><div class="a-chip">NBA</div><div class="a-chip">MLB</div><div class="a-chip">NHL</div>
+      <div class="a-sep"></div><div class="a-chip">All Books</div>
+    </div>
+    <div class="a-games">
+      <div class="a-card">
+        <div class="a-card-hdr">
+          <span class="a-sport">NFL</span>
+          <div class="a-game-title">Buffalo Bills @ Kansas City Chiefs</div>
+          <div class="a-game-time">Thu Sep 10 · 20:20 ET</div>
+          <div class="a-alert">+</div>
+        </div>
+        <div class="odds-grid">
+          <div class="odds-col-hdr" style="background:#f8f9fa;border-color:#e8eaed;color:#9ca3af"></div>
+          <div class="odds-col-hdr" style="background:#f8f9fa;border-color:#e8eaed;color:#9ca3af">DraftKings</div>
+          <div class="odds-col-hdr" style="background:#f8f9fa;border-color:#e8eaed;color:#9ca3af">FanDuel</div>
+          <div class="odds-col-hdr" style="background:#f8f9fa;border-color:#e8eaed;color:#9ca3af">BetMGM</div>
+          <div class="odds-col-hdr" style="background:#f8f9fa;border-color:#e8eaed;color:#9ca3af">Caesars</div>
+          <div class="odds-col-hdr" style="background:#f8f9fa;border-color:#e8eaed;color:#9ca3af">Pinnacle</div>
+          <div class="odds-row-lbl" style="border-color:#e8eaed;background:#f8f9fa;color:#9ca3af">Bills ML</div>
+          <div class="odds-cell" style="border-color:#e8eaed"><div class="odds-num" style="color:#374151">+130</div></div>
+          <div class="odds-cell" style="border-color:#e8eaed"><div class="odds-num" style="color:#374151">+128</div></div>
+          <div class="odds-cell" style="border-color:#e8eaed"><div class="odds-num worst" style="color:#d1d5db">+124</div></div>
+          <div class="odds-cell" style="border-color:#e8eaed"><div class="odds-num" style="color:#374151">+130</div></div>
+          <div class="odds-cell" style="border-color:#e8eaed"><div class="odds-num best" style="color:#166534">+138</div></div>
+          <div class="odds-row-lbl" style="border-color:#e8eaed;background:#f8f9fa;color:#9ca3af">Chiefs ML</div>
+          <div class="odds-cell" style="border-color:#e8eaed"><div class="odds-num best" style="color:#166534">-148</div></div>
+          <div class="odds-cell" style="border-color:#e8eaed"><div class="odds-num" style="color:#374151">-155</div></div>
+          <div class="odds-cell" style="border-color:#e8eaed"><div class="odds-num" style="color:#374151">-150</div></div>
+          <div class="odds-cell" style="border-color:#e8eaed"><div class="odds-num" style="color:#374151">-152</div></div>
+          <div class="odds-cell" style="border-color:#e8eaed"><div class="odds-num worst" style="color:#d1d5db">-158</div></div>
+        </div>
+      </div>
+      <div class="a-card">
+        <div class="a-card-hdr">
+          <span class="a-sport">NBA</span>
+          <div class="a-game-title">LA Lakers @ Boston Celtics</div>
+          <div class="a-game-time">Fri Nov 1 · 19:00 ET</div>
+          <div class="a-alert">+</div>
+        </div>
+        <div class="odds-grid">
+          <div class="odds-col-hdr" style="background:#f8f9fa;border-color:#e8eaed;color:#9ca3af"></div>
+          <div class="odds-col-hdr" style="background:#f8f9fa;border-color:#e8eaed;color:#9ca3af">DraftKings</div>
+          <div class="odds-col-hdr" style="background:#f8f9fa;border-color:#e8eaed;color:#9ca3af">FanDuel</div>
+          <div class="odds-col-hdr" style="background:#f8f9fa;border-color:#e8eaed;color:#9ca3af">BetMGM</div>
+          <div class="odds-col-hdr" style="background:#f8f9fa;border-color:#e8eaed;color:#9ca3af">Caesars</div>
+          <div class="odds-col-hdr" style="background:#f8f9fa;border-color:#e8eaed;color:#9ca3af">Pinnacle</div>
+          <div class="odds-row-lbl" style="border-color:#e8eaed;background:#f8f9fa;color:#9ca3af">Lakers ML</div>
+          <div class="odds-cell" style="border-color:#e8eaed"><div class="odds-num best" style="color:#166534">+175</div></div>
+          <div class="odds-cell" style="border-color:#e8eaed"><div class="odds-num" style="color:#374151">+170</div></div>
+          <div class="odds-cell" style="border-color:#e8eaed"><div class="odds-num" style="color:#374151">+168</div></div>
+          <div class="odds-cell" style="border-color:#e8eaed"><div class="odds-num worst" style="color:#d1d5db">+162</div></div>
+          <div class="odds-cell" style="border-color:#e8eaed"><div class="odds-num" style="color:#374151">+172</div></div>
+          <div class="odds-row-lbl" style="border-color:#e8eaed;background:#f8f9fa;color:#9ca3af">Celtics ML</div>
+          <div class="odds-cell" style="border-color:#e8eaed"><div class="odds-num" style="color:#374151">-200</div></div>
+          <div class="odds-cell" style="border-color:#e8eaed"><div class="odds-num best" style="color:#166534">-195</div></div>
+          <div class="odds-cell" style="border-color:#e8eaed"><div class="odds-num" style="color:#374151">-200</div></div>
+          <div class="odds-cell" style="border-color:#e8eaed"><div class="odds-num worst" style="color:#d1d5db">-210</div></div>
+          <div class="odds-cell" style="border-color:#e8eaed"><div class="odds-num" style="color:#374151">-205</div></div>
+        </div>
+      </div>
+      <div class="a-card">
+        <div class="a-card-hdr">
+          <span class="a-sport">MLB</span>
+          <div class="a-game-title">Boston Red Sox @ New York Yankees</div>
+          <div class="a-game-time">Fri Jul 4 · 19:05 ET</div>
+          <div class="a-alert">+</div>
+        </div>
+        <div class="odds-grid">
+          <div class="odds-col-hdr" style="background:#f8f9fa;border-color:#e8eaed;color:#9ca3af"></div>
+          <div class="odds-col-hdr" style="background:#f8f9fa;border-color:#e8eaed;color:#9ca3af">DraftKings</div>
+          <div class="odds-col-hdr" style="background:#f8f9fa;border-color:#e8eaed;color:#9ca3af">FanDuel</div>
+          <div class="odds-col-hdr" style="background:#f8f9fa;border-color:#e8eaed;color:#9ca3af">BetMGM</div>
+          <div class="odds-col-hdr" style="background:#f8f9fa;border-color:#e8eaed;color:#9ca3af">Caesars</div>
+          <div class="odds-col-hdr" style="background:#f8f9fa;border-color:#e8eaed;color:#9ca3af">Pinnacle</div>
+          <div class="odds-row-lbl" style="border-color:#e8eaed;background:#f8f9fa;color:#9ca3af">Red Sox ML</div>
+          <div class="odds-cell" style="border-color:#e8eaed"><div class="odds-num" style="color:#374151">+112</div></div>
+          <div class="odds-cell" style="border-color:#e8eaed"><div class="odds-num best" style="color:#166534">+118</div></div>
+          <div class="odds-cell" style="border-color:#e8eaed"><div class="odds-num" style="color:#374151">+110</div></div>
+          <div class="odds-cell" style="border-color:#e8eaed"><div class="odds-num worst" style="color:#d1d5db">+105</div></div>
+          <div class="odds-cell" style="border-color:#e8eaed"><div class="odds-num" style="color:#374151">+115</div></div>
+          <div class="odds-row-lbl" style="border-color:#e8eaed;background:#f8f9fa;color:#9ca3af">Yankees ML</div>
+          <div class="odds-cell" style="border-color:#e8eaed"><div class="odds-num worst" style="color:#d1d5db">-138</div></div>
+          <div class="odds-cell" style="border-color:#e8eaed"><div class="odds-num" style="color:#374151">-132</div></div>
+          <div class="odds-cell" style="border-color:#e8eaed"><div class="odds-num best" style="color:#166534">-128</div></div>
+          <div class="odds-cell" style="border-color:#e8eaed"><div class="odds-num" style="color:#374151">-130</div></div>
+          <div class="odds-cell" style="border-color:#e8eaed"><div class="odds-num" style="color:#374151">-133</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ THEME B ══ -->
+<div class="panel" id="pb">
+  <nav class="b-nav">
+    <div class="b-logo"><div class="b-logo-mark">OI</div>OddsIQ</div>
+    <div class="b-nav-links">
+      <div class="b-nl act">Odds Board</div><div class="b-nl">Line Shopping</div><div class="b-nl">Alerts</div><div class="b-nl">PnL</div><div class="b-nl">Arbitrage</div><div class="b-nl">Sharp</div>
+    </div>
+    <div class="b-nav-r"><button class="b-btn-l">Log in</button><button class="b-btn-s">Get Access</button></div>
+  </nav>
+  <div class="b-sub">
+    <div class="b-sl act">Moneyline</div><div class="b-sl">Spread</div><div class="b-sl">Total</div><div class="b-sl">1H</div><div class="b-sl">Props</div>
+  </div>
+  <div class="b-main">
+    <div class="b-topbar">
+      <div class="b-title">Odds Board</div>
+      <div class="b-live"><div class="dot"></div>Live — 83 books</div>
+    </div>
+    <div class="b-stats">
+      <div class="b-stat"><div class="b-stat-lbl">Total PnL</div><div class="b-stat-val pos">+$81.89</div><div class="b-stat-sub">+$12.40 today</div></div>
+      <div class="b-stat"><div class="b-stat-lbl">Win Rate</div><div class="b-stat-val">66.7%</div><div class="b-stat-sub">4W · 2L · 1 Pending</div></div>
+      <div class="b-stat"><div class="b-stat-lbl">Avg CLV</div><div class="b-stat-val pos">+7.3</div><div class="b-stat-sub">Beating closing line</div></div>
+      <div class="b-stat"><div class="b-stat-lbl">Open Alerts</div><div class="b-stat-val" style="color:#3d4a5c">1</div><div class="b-stat-sub">0 triggered today</div></div>
+    </div>
+    <div class="b-filters">
+      <div class="b-chip on">All</div><div class="b-chip">NFL</div><div class="b-chip">NBA</div><div class="b-chip">MLB</div><div class="b-chip">NHL</div>
+      <div class="b-sep"></div><div class="b-chip">All Books</div>
+    </div>
+    <div class="b-games">
+      <div class="b-card">
+        <div class="b-card-hdr"><span class="b-sport">NFL</span><div class="b-game-title">Buffalo Bills @ Kansas City Chiefs</div><div class="b-game-time">Thu Sep 10 · 20:20 ET</div><div class="b-alert">+</div></div>
+        <div class="odds-grid">
+          <div class="odds-col-hdr"></div><div class="odds-col-hdr">DraftKings</div><div class="odds-col-hdr">FanDuel</div><div class="odds-col-hdr">BetMGM</div><div class="odds-col-hdr">Caesars</div><div class="odds-col-hdr">Pinnacle</div>
+          <div class="odds-row-lbl">Bills ML</div>
+          <div class="odds-cell"><div class="odds-num">+130</div></div><div class="odds-cell"><div class="odds-num">+128</div></div><div class="odds-cell"><div class="odds-num worst">+124</div></div><div class="odds-cell"><div class="odds-num">+130</div></div><div class="odds-cell"><div class="odds-num best">+138</div></div>
+          <div class="odds-row-lbl">Chiefs ML</div>
+          <div class="odds-cell"><div class="odds-num best">-148</div></div><div class="odds-cell"><div class="odds-num">-155</div></div><div class="odds-cell"><div class="odds-num">-150</div></div><div class="odds-cell"><div class="odds-num">-152</div></div><div class="odds-cell"><div class="odds-num worst">-158</div></div>
+        </div>
+      </div>
+      <div class="b-card">
+        <div class="b-card-hdr"><span class="b-sport">NBA</span><div class="b-game-title">LA Lakers @ Boston Celtics</div><div class="b-game-time">Fri Nov 1 · 19:00 ET</div><div class="b-alert">+</div></div>
+        <div class="odds-grid">
+          <div class="odds-col-hdr"></div><div class="odds-col-hdr">DraftKings</div><div class="odds-col-hdr">FanDuel</div><div class="odds-col-hdr">BetMGM</div><div class="odds-col-hdr">Caesars</div><div class="odds-col-hdr">Pinnacle</div>
+          <div class="odds-row-lbl">Lakers ML</div>
+          <div class="odds-cell"><div class="odds-num best">+175</div></div><div class="odds-cell"><div class="odds-num">+170</div></div><div class="odds-cell"><div class="odds-num">+168</div></div><div class="odds-cell"><div class="odds-num worst">+162</div></div><div class="odds-cell"><div class="odds-num">+172</div></div>
+          <div class="odds-row-lbl">Celtics ML</div>
+          <div class="odds-cell"><div class="odds-num">-200</div></div><div class="odds-cell"><div class="odds-num best">-195</div></div><div class="odds-cell"><div class="odds-num">-200</div></div><div class="odds-cell"><div class="odds-num worst">-210</div></div><div class="odds-cell"><div class="odds-num">-205</div></div>
+        </div>
+      </div>
+      <div class="b-card">
+        <div class="b-card-hdr"><span class="b-sport">MLB</span><div class="b-game-title">Boston Red Sox @ New York Yankees</div><div class="b-game-time">Fri Jul 4 · 19:05 ET</div><div class="b-alert">+</div></div>
+        <div class="odds-grid">
+          <div class="odds-col-hdr"></div><div class="odds-col-hdr">DraftKings</div><div class="odds-col-hdr">FanDuel</div><div class="odds-col-hdr">BetMGM</div><div class="odds-col-hdr">Caesars</div><div class="odds-col-hdr">Pinnacle</div>
+          <div class="odds-row-lbl">Red Sox ML</div>
+          <div class="odds-cell"><div class="odds-num">+112</div></div><div class="odds-cell"><div class="odds-num best">+118</div></div><div class="odds-cell"><div class="odds-num">+110</div></div><div class="odds-cell"><div class="odds-num worst">+105</div></div><div class="odds-cell"><div class="odds-num">+115</div></div>
+          <div class="odds-row-lbl">Yankees ML</div>
+          <div class="odds-cell"><div class="odds-num worst">-138</div></div><div class="odds-cell"><div class="odds-num">-132</div></div><div class="odds-cell"><div class="odds-num best">-128</div></div><div class="odds-cell"><div class="odds-num">-130</div></div><div class="odds-cell"><div class="odds-num">-133</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ THEME C ══ -->
+<div class="panel" id="pc">
+  <nav class="c-nav">
+    <div class="c-logo"><div class="c-logo-mark">OI</div>OddsIQ</div>
+    <div class="c-nav-links">
+      <div class="c-nl act">Odds Board</div><div class="c-nl">Line Shopping</div><div class="c-nl">Alerts</div><div class="c-nl">PnL</div><div class="c-nl">Arbitrage</div><div class="c-nl">Sharp</div>
+    </div>
+    <div class="c-nav-r"><button class="c-btn-l">Log in</button><button class="c-btn-s">Get Access</button></div>
+  </nav>
+  <div class="c-sub">
+    <div class="c-sl act">Moneyline</div><div class="c-sl">Spread</div><div class="c-sl">Total</div><div class="c-sl">1H</div><div class="c-sl">Props</div>
+  </div>
+  <div class="c-main">
+    <div class="c-topbar">
+      <div class="c-title">Odds Board</div>
+      <div class="c-live"><div class="dot"></div>Live — 83 books</div>
+    </div>
+    <div class="c-stats">
+      <div class="c-stat"><div class="c-stat-lbl">Total PnL</div><div class="c-stat-val pos">+$81.89</div><div class="c-stat-sub">+$12.40 today</div></div>
+      <div class="c-stat"><div class="c-stat-lbl">Win Rate</div><div class="c-stat-val">66.7%</div><div class="c-stat-sub">4W · 2L · 1 Pending</div></div>
+      <div class="c-stat"><div class="c-stat-lbl">Avg CLV</div><div class="c-stat-val pos">+7.3</div><div class="c-stat-sub">Beating closing line</div></div>
+      <div class="c-stat"><div class="c-stat-lbl">Open Alerts</div><div class="c-stat-val" style="color:#555">1</div><div class="c-stat-sub">0 triggered today</div></div>
+    </div>
+    <div class="c-filters">
+      <div class="c-chip on">All</div><div class="c-chip">NFL</div><div class="c-chip">NBA</div><div class="c-chip">MLB</div><div class="c-chip">NHL</div>
+      <div class="c-sep"></div><div class="c-chip">All Books</div>
+    </div>
+    <div class="c-games">
+      <div class="c-card">
+        <div class="c-card-hdr"><span class="c-sport">NFL</span><div class="c-game-title">Buffalo Bills @ Kansas City Chiefs</div><div class="c-game-time">Thu Sep 10 · 20:20 ET</div><div class="c-alert">+</div></div>
+        <div class="odds-grid">
+          <div class="odds-col-hdr"></div><div class="odds-col-hdr">DraftKings</div><div class="odds-col-hdr">FanDuel</div><div class="odds-col-hdr">BetMGM</div><div class="odds-col-hdr">Caesars</div><div class="odds-col-hdr">Pinnacle</div>
+          <div class="odds-row-lbl">Bills ML</div>
+          <div class="odds-cell"><div class="odds-num">+130</div></div><div class="odds-cell"><div class="odds-num">+128</div></div><div class="odds-cell"><div class="odds-num worst">+124</div></div><div class="odds-cell"><div class="odds-num">+130</div></div><div class="odds-cell"><div class="odds-num best">+138</div></div>
+          <div class="odds-row-lbl">Chiefs ML</div>
+          <div class="odds-cell"><div class="odds-num best">-148</div></div><div class="odds-cell"><div class="odds-num">-155</div></div><div class="odds-cell"><div class="odds-num">-150</div></div><div class="odds-cell"><div class="odds-num">-152</div></div><div class="odds-cell"><div class="odds-num worst">-158</div></div>
+        </div>
+      </div>
+      <div class="c-card">
+        <div class="c-card-hdr"><span class="c-sport">NBA</span><div class="c-game-title">LA Lakers @ Boston Celtics</div><div class="c-game-time">Fri Nov 1 · 19:00 ET</div><div class="c-alert">+</div></div>
+        <div class="odds-grid">
+          <div class="odds-col-hdr"></div><div class="odds-col-hdr">DraftKings</div><div class="odds-col-hdr">FanDuel</div><div class="odds-col-hdr">BetMGM</div><div class="odds-col-hdr">Caesars</div><div class="odds-col-hdr">Pinnacle</div>
+          <div class="odds-row-lbl">Lakers ML</div>
+          <div class="odds-cell"><div class="odds-num best">+175</div></div><div class="odds-cell"><div class="odds-num">+170</div></div><div class="odds-cell"><div class="odds-num">+168</div></div><div class="odds-cell"><div class="odds-num worst">+162</div></div><div class="odds-cell"><div class="odds-num">+172</div></div>
+          <div class="odds-row-lbl">Celtics ML</div>
+          <div class="odds-cell"><div class="odds-num">-200</div></div><div class="odds-cell"><div class="odds-num best">-195</div></div><div class="odds-cell"><div class="odds-num">-200</div></div><div class="odds-cell"><div class="odds-num worst">-210</div></div><div class="odds-cell"><div class="odds-num">-205</div></div>
+        </div>
+      </div>
+      <div class="c-card">
+        <div class="c-card-hdr"><span class="c-sport">MLB</span><div class="c-game-title">Boston Red Sox @ New York Yankees</div><div class="c-game-time">Fri Jul 4 · 19:05 ET</div><div class="c-alert">+</div></div>
+        <div class="odds-grid">
+          <div class="odds-col-hdr"></div><div class="odds-col-hdr">DraftKings</div><div class="odds-col-hdr">FanDuel</div><div class="odds-col-hdr">BetMGM</div><div class="odds-col-hdr">Caesars</div><div class="odds-col-hdr">Pinnacle</div>
+          <div class="odds-row-lbl">Red Sox ML</div>
+          <div class="odds-cell"><div class="odds-num">+112</div></div><div class="odds-cell"><div class="odds-num best">+118</div></div><div class="odds-cell"><div class="odds-num">+110</div></div><div class="odds-cell"><div class="odds-num worst">+105</div></div><div class="odds-cell"><div class="odds-num">+115</div></div>
+          <div class="odds-row-lbl">Yankees ML</div>
+          <div class="odds-cell"><div class="odds-num worst">-138</div></div><div class="odds-cell"><div class="odds-num">-132</div></div><div class="odds-cell"><div class="odds-num best">-128</div></div><div class="odds-cell"><div class="odds-num">-130</div></div><div class="odds-cell"><div class="odds-num">-133</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+function show(id,btn){
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.sw-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('p'+id).classList.add('active');
+  btn.classList.add('active');
+}
+</script>
+</body>
+</html>

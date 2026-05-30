@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>OddsIQ — Dark Purple Design</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:        #0d0c1a;
+  --bg-card:   #14132a;
+  --bg-card2:  #1a1836;
+  --border:    rgba(139,111,247,0.15);
+  --border-hi: rgba(139,111,247,0.35);
+  --purple:    #8b6ff7;
+  --purple-lo: #7c5af6;
+  --purple-dim: rgba(139,111,247,0.12);
+  --text:      #ffffff;
+  --text-muted: #8f8db8;
+  --text-dim:  #5a5880;
+  --green:     #34d399;
+  --mono: 'IBM Plex Mono', monospace;
+  --sans: 'DM Sans', sans-serif;
+}
+
+body { background: var(--bg); font-family: var(--sans); color: var(--text); min-height: 100vh; }
+
+/* NAV */
+nav {
+  display: flex; align-items: center; height: 58px;
+  padding: 0 32px;
+  border-bottom: 1px solid var(--border);
+  background: rgba(13,12,26,0.95);
+  backdrop-filter: blur(10px);
+  position: sticky; top: 0; z-index: 10;
+}
+.logo { font-size: 18px; font-weight: 700; color: #fff; letter-spacing: -.5px; margin-right: 40px; }
+.logo span { color: var(--purple); }
+nav a {
+  font-size: 13px; font-weight: 500; color: var(--text-muted);
+  padding: 6px 12px; border-radius: 8px;
+  text-decoration: none; transition: all .15s;
+}
+nav a:hover { color: #fff; background: var(--purple-dim); }
+nav a.active { color: #fff; background: var(--purple-dim); }
+.nav-right { margin-left: auto; display: flex; gap: 8px; align-items: center; }
+.btn-ghost {
+  padding: 6px 16px; border-radius: 8px;
+  border: 1px solid var(--border-hi);
+  background: none; font-size: 13px; font-weight: 500;
+  color: var(--text-muted); cursor: pointer; font-family: var(--sans);
+  transition: all .15s;
+}
+.btn-ghost:hover { color: #fff; border-color: var(--purple); }
+.btn-primary {
+  padding: 7px 18px; border-radius: 8px;
+  background: linear-gradient(135deg, #8b6ff7, #6d4af0);
+  color: #fff; border: none; font-size: 13px; font-weight: 600;
+  cursor: pointer; font-family: var(--sans);
+  box-shadow: 0 4px 16px rgba(109,74,240,.35);
+}
+
+/* PAGE */
+.page { max-width: 860px; margin: 0 auto; padding: 40px 32px; }
+
+.page-title { font-size: 28px; font-weight: 700; color: #fff; letter-spacing: -.3px; }
+.page-sub { font-size: 14px; color: var(--text-muted); margin-top: 6px; line-height: 1.5; }
+
+/* PILLS */
+.pills { display: flex; flex-wrap: wrap; gap: 8px; margin: 28px 0; }
+.pill {
+  padding: 6px 14px; border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  font-size: 12px; font-weight: 500; color: var(--text-muted);
+  cursor: pointer; transition: all .15s;
+}
+.pill:hover { border-color: var(--border-hi); color: #fff; }
+.pill.active {
+  background: linear-gradient(135deg, #8b6ff7, #6d4af0);
+  border-color: transparent; color: #fff;
+  box-shadow: 0 4px 16px rgba(109,74,240,.3);
+}
+
+/* CARDS */
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  overflow: hidden;
+  max-width: 560px;
+  box-shadow: 0 8px 32px rgba(0,0,0,.4), 0 0 0 1px rgba(139,111,247,.05);
+  transition: border-color .2s;
+}
+.card:hover { border-color: var(--border-hi); }
+
+.card-header {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; gap: 10px;
+  background: var(--bg-card2);
+}
+.dot { width: 7px; height: 7px; border-radius: 50%; background: var(--purple); box-shadow: 0 0 8px var(--purple); }
+.card-header h3 { font-size: 14px; font-weight: 600; color: #fff; }
+.card-header p { font-size: 12px; color: var(--text-muted); margin-left: auto; }
+
+/* TABLE HEADER */
+.tbl-head {
+  display: grid; grid-template-columns: 1fr 1fr 1fr;
+  padding: 10px 20px;
+  background: rgba(255,255,255,.02);
+  border-bottom: 1px solid var(--border);
+}
+.tbl-head span {
+  font-size: 11px; font-weight: 600; color: var(--text-dim);
+  text-transform: uppercase; letter-spacing: .6px;
+}
+.tbl-head span:nth-child(2) { text-align: center; }
+.tbl-head span:nth-child(3) { text-align: right; }
+
+/* ROWS */
+.tbl-row {
+  display: grid; grid-template-columns: 1fr 1fr 1fr;
+  padding: 14px 20px; border-bottom: 1px solid var(--border);
+  align-items: center; transition: background .1s;
+}
+.tbl-row:last-of-type { border: none; }
+.tbl-row:hover { background: rgba(139,111,247,.04); }
+
+/* INPUTS */
+input[type=text], input[type=number], input {
+  background: rgba(255,255,255,.05);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-family: var(--mono);
+  font-size: 14px;
+  color: #fff;
+  text-align: right;
+  width: 110px;
+  outline: none;
+  transition: border .15s, box-shadow .15s;
+}
+input:focus {
+  border-color: var(--purple);
+  box-shadow: 0 0 0 3px rgba(139,111,247,.15);
+  background: rgba(139,111,247,.05);
+}
+input::placeholder { color: var(--text-dim); }
+
+.val-center { text-align: center; font-family: var(--mono); font-size: 14px; color: var(--text-muted); font-weight: 500; }
+.val-right { text-align: right; font-family: var(--mono); font-size: 15px; font-weight: 600; color: var(--purple); }
+.val-green { color: var(--green); }
+
+/* FOOTER */
+.card-footer {
+  padding: 10px 20px;
+  border-top: 1px solid var(--border);
+  background: rgba(255,255,255,.02);
+  display: flex; justify-content: space-between; align-items: center;
+  font-size: 12px; color: var(--text-dim);
+}
+.card-footer .add { color: var(--purple); cursor: pointer; font-weight: 500; }
+.card-footer .add:hover { color: #a78bfa; }
+
+/* FORM ROWS */
+.form-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 13px 20px;
+  border-bottom: 1px solid var(--border);
+}
+.form-row:last-of-type { border: none; }
+.form-row label { font-size: 14px; color: var(--text-muted); }
+.form-row .input-wrap { display: flex; align-items: center; gap: 6px; }
+.form-row .prefix { font-size: 13px; color: var(--text-dim); font-family: var(--mono); }
+
+/* METRICS */
+.metrics {
+  display: flex; border-top: 1px solid var(--border);
+  background: rgba(255,255,255,.02);
+}
+.metric { flex: 1; padding: 16px 20px; border-right: 1px solid var(--border); }
+.metric:last-child { border: none; }
+.metric .mlabel { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: .6px; color: var(--text-dim); }
+.metric .mval { font-family: var(--mono); font-size: 22px; font-weight: 700; color: var(--purple); margin-top: 6px; }
+.metric .mval.green { color: var(--green); }
+.metric .mval.white { color: #fff; }
+
+/* ODDS BOARD PREVIEW */
+.section-label {
+  font-size: 11px; font-weight: 600; text-transform: uppercase;
+  letter-spacing: .8px; color: var(--text-dim);
+  margin: 40px 0 16px;
+  display: flex; align-items: center; gap: 8px;
+}
+.section-label::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+.odds-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 0 4px 20px rgba(0,0,0,.3);
+  margin-bottom: 10px;
+  transition: border-color .2s;
+}
+.odds-card:hover { border-color: var(--border-hi); }
+.odds-row {
+  display: grid; grid-template-columns: 2fr 80px 80px 80px 80px 80px 100px;
+  padding: 14px 20px; align-items: center;
+  border-bottom: 1px solid var(--border);
+  gap: 8px;
+}
+.odds-row:last-child { border: none; }
+.odds-head { background: var(--bg-card2); }
+.odds-head span { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .5px; color: var(--text-dim); }
+.odds-head span:not(:first-child) { text-align: center; }
+.team { font-size: 14px; font-weight: 600; color: #fff; }
+.game-time { font-size: 12px; color: var(--text-muted); font-weight: 400; display: block; margin-top: 2px; }
+.odds-val { font-family: var(--mono); font-size: 13px; font-weight: 500; color: var(--text-muted); text-align: center; }
+.odds-val.best { color: var(--green); font-weight: 600; }
+.odds-val.worst { color: var(--text-dim); }
+.sport-badge {
+  display: inline-block; padding: 2px 8px; border-radius: 6px;
+  font-size: 11px; font-weight: 600;
+  background: var(--purple-dim); color: var(--purple);
+}
+
+/* SEPARATOR */
+.spacer { height: 32px; }
+</style>
+</head>
+<body>
+
+<nav>
+  <span class="logo">Odds<span>IQ</span></span>
+  <a href="#">Odds Board</a>
+  <a href="#">Line Shopping</a>
+  <a href="#">Alerts</a>
+  <a href="#">PnL</a>
+  <a href="#">Sharp Metrics</a>
+  <a href="#" class="active">Calculator</a>
+  <div class="nav-right">
+    <button class="btn-ghost">Log in</button>
+    <button class="btn-primary">Sign up</button>
+  </div>
+</nav>
+
+<div class="page">
+
+  <!-- ── Calculator Section ── -->
+  <div class="page-title">No-Vig Fair Odds Calculator</div>
+  <div class="page-sub">Strip the sportsbook margin and find the true fair odds for each side.</div>
+
+  <div class="pills">
+    <span class="pill">Implied Probability</span>
+    <span class="pill active">No-Vig Fair Odds</span>
+    <span class="pill">Expected Value</span>
+    <span class="pill">Kelly Criterion</span>
+    <span class="pill">Arbitrage</span>
+    <span class="pill">CLV</span>
+    <span class="pill">Hold</span>
+    <span class="pill">Vig</span>
+    <span class="pill">Bonus Bet</span>
+    <span class="pill">Odds Converter</span>
+    <span class="pill">Parlay</span>
+    <span class="pill">Prediction Market</span>
+    <span class="pill">Point Spread</span>
+    <span class="pill">Poisson</span>
+    <span class="pill">Round Robin</span>
+  </div>
+
+  <!-- No-Vig table -->
+  <div class="card">
+    <div class="card-header">
+      <div class="dot"></div>
+      <h3>No-Vig Fair Odds</h3>
+      <p>American odds</p>
+    </div>
+    <div class="tbl-head"><span>Odds</span><span>No-Vig %</span><span>No-Vig Odds</span></div>
+    <div class="tbl-row">
+      <input value="+110" />
+      <div class="val-center">50.00%</div>
+      <div class="val-right">+100</div>
+    </div>
+    <div class="tbl-row">
+      <input value="+110" />
+      <div class="val-center">50.00%</div>
+      <div class="val-right">+100</div>
+    </div>
+    <div class="card-footer">
+      <span class="add">+ Add side</span>
+      <span>Sportsbook hold: <span style="font-family:var(--mono);color:var(--text-muted);">-4.76%</span></span>
+    </div>
+  </div>
+
+  <div class="spacer"></div>
+
+  <!-- EV card -->
+  <div class="card">
+    <div class="card-header">
+      <div class="dot"></div>
+      <h3>Expected Value Calculator</h3>
+    </div>
+    <div class="form-row">
+      <label>Wager</label>
+      <div class="input-wrap"><span class="prefix">$</span><input value="100" /></div>
+    </div>
+    <div class="form-row">
+      <label>Odds</label>
+      <input value="+110" />
+    </div>
+    <div class="form-row">
+      <label>Win Probability</label>
+      <div class="input-wrap"><input value="60" /><span class="prefix">%</span></div>
+    </div>
+    <div class="metrics">
+      <div class="metric">
+        <div class="mlabel">Expected Value</div>
+        <div class="mval green">+$26.00</div>
+      </div>
+      <div class="metric">
+        <div class="mlabel">ROI</div>
+        <div class="mval green">26.00%</div>
+      </div>
+      <div class="metric">
+        <div class="mlabel">Profit if Win</div>
+        <div class="mval white">$110.00</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Odds Board Preview ── -->
+  <div class="section-label">Odds Board Preview</div>
+
+  <div class="odds-card">
+    <div class="odds-row odds-head">
+      <span>Game</span>
+      <span>ML</span>
+      <span>Spread</span>
+      <span>Total</span>
+      <span>DK</span>
+      <span>FD</span>
+      <span>Best Book</span>
+    </div>
+    <div class="odds-row">
+      <div>
+        <div class="team">Bills @ Chiefs</div>
+        <span class="game-time"><span class="sport-badge">NFL</span> &nbsp;Sun 4:25 PM</span>
+      </div>
+      <div class="odds-val best">+130</div>
+      <div class="odds-val">-3.5</div>
+      <div class="odds-val">47.5</div>
+      <div class="odds-val">+128</div>
+      <div class="odds-val best">+130</div>
+      <div class="odds-val" style="color:#fff;font-weight:600;">FanDuel</div>
+    </div>
+    <div class="odds-row">
+      <div>
+        <div class="team">Lakers @ Celtics</div>
+        <span class="game-time"><span class="sport-badge">NBA</span> &nbsp;Tue 7:30 PM</span>
+      </div>
+      <div class="odds-val worst">+170</div>
+      <div class="odds-val">-5.5</div>
+      <div class="odds-val">224.5</div>
+      <div class="odds-val best">+175</div>
+      <div class="odds-val">+170</div>
+      <div class="odds-val" style="color:#fff;font-weight:600;">DraftKings</div>
+    </div>
+    <div class="odds-row">
+      <div>
+        <div class="team">Red Sox @ Yankees</div>
+        <span class="game-time"><span class="sport-badge">MLB</span> &nbsp;Mon 1:05 PM</span>
+      </div>
+      <div class="odds-val">+110</div>
+      <div class="odds-val">-1.5</div>
+      <div class="odds-val">9.0</div>
+      <div class="odds-val best">+112</div>
+      <div class="odds-val">+110</div>
+      <div class="odds-val" style="color:#fff;font-weight:600;">DraftKings</div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>
