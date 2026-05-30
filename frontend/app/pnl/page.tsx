@@ -1,22 +1,18 @@
 "use client"
 
-import { useState } from "react"
 import { BetLogTable } from "@/components/bets/BetLogTable"
 import { BetForm } from "@/components/bets/BetForm"
-import { MOCK_BETS, Bet } from "@/lib/mock-data"
+import { useBets } from "@/context/BetsContext"
+import { Bet } from "@/lib/mock-data"
 
 export default function PnLPage() {
-  const [bets, setBets] = useState<Bet[]>(MOCK_BETS)
+  const { bets, addBet } = useBets()
 
   const settled = bets.filter((b) => b.result !== "pending")
   const totalPnl = settled.reduce((sum, b) => sum + b.pnl, 0)
   const wins = settled.filter((b) => b.result === "win").length
   const winRate = settled.length > 0 ? ((wins / settled.length) * 100).toFixed(1) : "0"
   const avgClv = settled.length > 0 ? (settled.reduce((sum, b) => sum + b.clv, 0) / settled.length).toFixed(1) : "0"
-
-  function handleAdd(data: Omit<Bet, "id" | "pnl" | "closingOdds" | "clv">) {
-    setBets((prev) => [{ id: String(Date.now()), pnl: 0, closingOdds: data.odds, clv: 0, ...data }, ...prev])
-  }
 
   return (
     <div className="space-y-6">
@@ -40,7 +36,7 @@ export default function PnLPage() {
       </div>
 
       <BetLogTable bets={bets} />
-      <BetForm onSubmit={handleAdd} />
+      <BetForm onSubmit={addBet} />
     </div>
   )
 }
