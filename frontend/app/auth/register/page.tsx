@@ -27,7 +27,7 @@ export default function RegisterPage() {
   return (
     <div className="max-w-sm mx-auto mt-16 space-y-6">
       <div className="text-center">
-        <h1 className="text-2xl font-bold">Create your account</h1>
+        <h1 className="text-2xl font-bold">Create your <span className="text-primary">account</span></h1>
         <p className="text-sm text-muted-foreground mt-1">Free forever — no credit card</p>
       </div>
       <form onSubmit={handleSubmit} className="space-y-4 rounded-lg border p-6">

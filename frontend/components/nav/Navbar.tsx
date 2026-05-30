@@ -37,9 +37,9 @@ export function Navbar() {
             <Link
               key={link.href}
               href={link.href}
-              className={`flex-1 text-center py-1.5 text-sm font-medium transition-colors rounded-lg ${
+              className={`flex-1 text-center py-1.5 text-sm font-medium transition-colors rounded-lg relative ${
                 pathname === link.href
-                  ? "bg-primary/15 text-foreground"
+                  ? "text-primary after:absolute after:bottom-0 after:left-1/2 after:-translate-x-1/2 after:w-4 after:h-px after:bg-primary after:rounded-full"
                   : "text-muted-foreground hover:text-foreground hover:bg-primary/10"
               }`}
             >

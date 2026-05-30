@@ -24,7 +24,7 @@ export default function LoginPage() {
   return (
     <div className="max-w-sm mx-auto mt-16 space-y-6">
       <div className="text-center">
-        <h1 className="text-2xl font-bold">Log in to OddsIQ</h1>
+        <h1 className="text-2xl font-bold">Log in to <span className="text-primary">OddsIQ</span></h1>
         <p className="text-sm text-muted-foreground mt-1">Track bets, set alerts, find edges</p>
       </div>
       <form onSubmit={handleSubmit} className="space-y-4 rounded-lg border p-6">

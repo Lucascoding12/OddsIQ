@@ -6,7 +6,7 @@ export default function LineShoppingPage() {
     <ProtectedRoute>
     <div className="space-y-4">
       <div>
-        <h1 className="text-2xl font-semibold">Line Shopping</h1>
+        <h1 className="text-2xl font-semibold">Line <span className="text-primary">Shopping</span></h1>
         <p className="text-sm text-muted-foreground mt-1">
           Compare odds across all books for a single game
         </p>

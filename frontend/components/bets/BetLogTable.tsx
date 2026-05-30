@@ -14,6 +14,7 @@ export function BetLogTable({ bets }: Props) {
         <thead className="bg-muted/50 border-b">
           <tr>
             <th className="text-left px-4 py-3 font-medium">Date</th>
+            <th className="text-left px-4 py-3 font-medium">Sport</th>
             <th className="text-left px-4 py-3 font-medium">Game</th>
             <th className="text-left px-4 py-3 font-medium">Bet</th>
             <th className="text-right px-4 py-3 font-medium">Odds</th>
@@ -28,6 +29,7 @@ export function BetLogTable({ bets }: Props) {
           {bets.map((bet) => (
             <tr key={bet.id} className="hover:bg-muted/30 transition-colors">
               <td className="px-4 py-3 text-muted-foreground">{bet.date}</td>
+              <td className="px-4 py-3 text-muted-foreground text-xs">{bet.sport}</td>
               <td className="px-4 py-3">{bet.game}</td>
               <td className="px-4 py-3">{bet.betType}</td>
               <td className="px-4 py-3 text-right">{formatOdds(bet.odds)}</td>

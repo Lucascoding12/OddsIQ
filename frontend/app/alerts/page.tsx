@@ -27,7 +27,7 @@ export default function AlertsPage() {
     <ProtectedRoute>
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold">Alerts</h1>
+        <h1 className="text-2xl font-semibold">Price <span className="text-primary">Alerts</span></h1>
         <p className="text-sm text-muted-foreground mt-1">Get notified when a line hits your target</p>
       </div>
       <AlertList alerts={alerts} onDelete={handleDelete} />

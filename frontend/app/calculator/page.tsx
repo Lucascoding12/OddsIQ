@@ -61,7 +61,7 @@ function Metric({ label, value, positive }: { label: string; value: string; posi
   return (
     <div className="flex flex-col gap-0.5 min-w-0">
       <span className="text-xs text-muted-foreground truncate">{label}</span>
-      <span className={`text-base font-semibold font-mono ${positive === true ? "text-blue-300" : positive === false ? "text-red-500" : ""}`}>
+      <span className={`text-base font-semibold font-mono ${positive === true ? "text-primary" : positive === false ? "text-red-500" : ""}`}>
         {value}
       </span>
     </div>
@@ -141,7 +141,7 @@ function NoVigCalc() {
             placeholder="+110" value={s.odds}
             onChange={(e) => setSides((prev) => prev.map((x, idx) => idx === i ? { odds: e.target.value } : x))} />
           <div className="text-center font-mono text-sm">{fairProbs[i] != null ? `${(fairProbs[i] * 100).toFixed(2)}%` : "—"}</div>
-          <div className="text-right font-mono text-sm font-medium text-blue-300">{fairProbs[i] != null ? formatOdds(fairOdds(fairProbs[i])) : "—"}</div>
+          <div className="text-right font-mono text-sm font-medium text-primary">{fairProbs[i] != null ? formatOdds(fairOdds(fairProbs[i])) : "—"}</div>
         </div>
       ))}
     </InlineTable>
@@ -218,7 +218,7 @@ function ArbCalc() {
           <span>Bankroll: <input className="w-20 border rounded px-2 py-0.5 font-mono bg-background focus:outline-none focus:ring-1 focus:ring-ring ml-1"
             value={bankroll} onChange={(e) => setBankroll(e.target.value)} placeholder="1000" /></span>
         </div>
-        {arb && <span className={arb.exists ? "text-blue-300 font-medium" : ""}>
+        {arb && <span className={arb.exists ? "text-primary font-medium" : ""}>
           {arb.exists ? `+${arb.profitPct.toFixed(2)}% arb profit` : `${(arb.totalProb * 100).toFixed(2)}% total prob`}
         </span>}
       </>}
@@ -389,7 +389,7 @@ function ParlayCalc() {
         </div>
         <div className="text-right space-y-0.5">
           {totalDec && <div>Parlay odds: <span className="font-mono font-medium">{formatOdds(americanOdds!)}</span></div>}
-          {payout && <div>Payout: <span className="font-mono font-medium text-blue-300">${payout.toFixed(2)}</span></div>}
+          {payout && <div>Payout: <span className="font-mono font-medium text-primary">${payout.toFixed(2)}</span></div>}
         </div>
       </>}
     >
@@ -500,7 +500,7 @@ function PoissonCalc() {
                 <div className="w-24 bg-muted rounded-full h-1.5">
                   <div className="bg-green-600 h-1.5 rounded-full" style={{ width: `${Math.min(100, d.prob * 300)}%` }} />
                 </div>
-                <span className={`font-mono w-14 text-right ${d.k === k ? "font-semibold text-blue-300" : ""}`}>{(d.prob * 100).toFixed(3)}%</span>
+                <span className={`font-mono w-14 text-right ${d.k === k ? "font-semibold text-primary" : ""}`}>{(d.prob * 100).toFixed(3)}%</span>
               </div>
             </div>
           ))}
@@ -609,6 +609,57 @@ const DESCRIPTIONS: Record<Calc, string> = {
   "Round Robin": "Generate all parlay combinations from a set of picks and calculate payouts.",
 }
 
+const USAGE: Record<Calc, string> = {
+  "Implied Probability": "Every American odds line contains an embedded win probability — the percentage the book needs you to lose at to make money. Use this before any bet to quickly check if the book's implied probability is lower than your own estimate. If it is, you have a potential edge.",
+  "No-Vig Fair Odds": "Sportsbooks inflate the implied probabilities on both sides of a market so they profit regardless of outcome. This calculator strips that margin out, leaving you with the true market consensus probability. Use it to compare lines across books and spot which side has the most value.",
+  "Expected Value": "EV tells you whether a bet is profitable in the long run. If you believe a team has a 60% chance to win but the book is paying as if they only have 50%, your edge is positive. A single bet can win or lose — EV is about what happens over hundreds of bets.",
+  "Kelly Criterion": "Kelly tells you how much of your bankroll to risk based on your edge and the odds offered. Betting too much (overbetting) risks ruin even with a real edge; betting too little leaves money on the table. Most sharp bettors use quarter- or half-Kelly (0.25–0.5×) to reduce variance.",
+  "Arbitrage": "An arb exists when the combined implied probability across all outcomes at different books is under 100%, guaranteeing a profit no matter the result. These windows are rare and close fast — books will limit accounts that exploit them. Use this to verify an arb and calculate exact stakes.",
+  "CLV": "Closing line value is the best long-run indicator of whether you're a sharp bettor. If you consistently bet odds that are better than where the market closes, you're identifying value that the market eventually prices in. Negative CLV over a large sample suggests you're betting into the public.",
+  "Hold": "The hold is the total sportsbook margin across a market — the sum of all implied probabilities minus 100%. A -110/-110 two-way market has a 4.76% hold. Lower hold books (like Pinnacle) are better for bettors. Use this to compare book efficiency before shopping lines.",
+  "Vig": "Vig (vigorish) is the cost of making a bet — the juice built into the odds. On a standard -110 line you pay about 4.5¢ per dollar wagered in vig. This calculator shows you the exact cost on any line so you can factor it into your EV calculations.",
+  "Bonus Bet": "Sportsbooks offer free bets and bonus bets that only pay the profit (not the stake) if you win. By placing the bonus on a longshot and hedging the other side at another book, you can convert a portion to guaranteed cash. The higher the odds used, the higher the conversion rate.",
+  "Odds Converter": "Different regions use different odds formats. US books use American (+150, -110), European books use decimal (2.50, 1.91), and UK books use fractional (3/2, 10/11). Use this any time you're comparing lines across international books or using a model that outputs one format.",
+  "Parlay": "A parlay chains multiple bets together — all legs must win for a payout. Books offer parlays at slightly worse than true combined odds, which is where their margin lives. Use this to verify what a parlay should pay and compare it to what the book is actually offering.",
+  "Prediction Market": "Prediction markets like Kalshi and Polymarket price contracts in cents (e.g., 65¢ = 65% implied probability). Convert these prices to standard odds formats to compare them against sportsbook lines and find discrepancies worth trading.",
+  "Point Spread": "A point spread represents the expected margin of victory. Using the historical scoring distribution for each sport (the standard deviation σ), you can convert any spread to an implied win probability and a fair moneyline. Useful for building your own power ratings.",
+  "Poisson": "The Poisson distribution models the probability of a discrete count occurring given an expected rate — goals in soccer, runs in baseball, pucks in hockey. If a team averages 1.8 goals per game, Poisson gives you the probability of them scoring exactly 0, 1, 2, 3… Use it to price totals and exact-score markets.",
+  "Round Robin": "A round robin generates every possible parlay combination of a given size from a set of picks. For example, a 5-team round robin at 3-leg size creates 10 separate 3-team parlays. It costs more upfront but you still win multiple parlays even if one or two legs lose.",
+}
+
+const EXAMPLES: Record<Calc, string> = {
+  "Implied Probability": "Chiefs are -150 to win. Enter -150 → implied probability is 60.0%. If you believe they win 65% of the time, you have a +5% edge and the bet has positive EV.",
+  "No-Vig Fair Odds": "A -110/-110 market. Each side has 52.38% implied (totals to 104.76%). After removing vig, the fair odds for each side are +100 (50% each). The 4.76% was the book's cut.",
+  "Expected Value": "You bet $100 at +110. You believe you win 60% of the time. EV = 0.60 × $110 − 0.40 × $100 = $66 − $40 = +$26 EV per bet. This is a strong +26% ROI edge.",
+  "Kelly Criterion": "You have a $5,000 bankroll. You find a +110 bet you think wins 60% of the time. Full Kelly says bet 14.8% ($740). At quarter-Kelly (0.25×), you'd bet $185 — much safer for variance.",
+  "Arbitrage": "DraftKings has the Chiefs at +105. FanDuel has the Bills at +103. Total implied = 48.8% + 49.3% = 98.1% < 100%. Enter both odds and your bankroll — the calculator shows exact stakes for a guaranteed 1.9% profit.",
+  "CLV": "You bet the Celtics ML at -180 on Monday morning. By tip-off, the line had moved to -210. Enter -180 as your bet odds and -210 as closing. You beat the close by +30 odds — a strong positive CLV signal.",
+  "Hold": "An NFL spread market: both sides are -110. Enter -110 and -110 → hold is 4.76%. Compare: Pinnacle might offer -105/-105, which is only a 2.44% hold — nearly half the juice.",
+  "Vig": "You see a -115/-105 market. The -115 side carries more vig. Enter both lines to see that the total vig is 4.52% and the -115 side is shouldering most of it. The -105 side is better value.",
+  "Bonus Bet": "You have a $100 free bet. Place it on a +200 longshot. If it wins, you collect $200 profit. Lay $133 on the other side at -150 at another book. Either way you walk away with ~$67 in guaranteed cash — a 67% conversion.",
+  "Odds Converter": "A Pinnacle line shows 2.050 decimal. Enter that in American → +105. A UK bookie shows 21/20 fractional → also +105. Now you can compare the same line across all three formats instantly.",
+  "Parlay": "3 legs all at -110 (-110 / -110 / -110). True combined decimal = 1.909 × 1.909 × 1.909 = 6.96. True parlay odds ≈ +496. If the book offers +450, they're taking a bigger cut than usual — now you know.",
+  "Prediction Market": "Kalshi is offering 'Chiefs win Super Bowl' at 38¢. Enter 38 → implied probability 38%, decimal odds 2.632, American odds +163. Compare that to sportsbook futures to find the better price.",
+  "Point Spread": "Chiefs are -3.5 favorites. Enter -3.5 with NFL (σ=13.45) → favorite covers ~60.4% of the time → implied moneyline -152. If the book is pricing them at -140 on the moneyline, that side has value.",
+  "Poisson": "A soccer team averages 1.8 goals per game (λ=1.8). Enter k=2 → P(exactly 2 goals) = 26.8%. P(under 2) = 46.3%. P(over 2) = 26.9%. Use this to decide if an 'over 2.5 goals' total at -115 is worth it.",
+  "Round Robin": "You like 5 NFL teams but don't want to risk all 5 needing to hit. Set up a 5-team, 3-leg round robin at $10/parlay → 10 parlays, $100 total stake. If 4 of 5 legs win, you cash 6 of the 10 parlays and still profit.",
+}
+
+function CalcInfo({ calc }: { calc: Calc }) {
+  return (
+    <div className="max-w-lg mt-6 space-y-4 border-t pt-5">
+      <div>
+        <p className="text-sm font-medium mb-1">When to use it</p>
+        <p className="text-sm text-muted-foreground leading-relaxed">{USAGE[calc]}</p>
+      </div>
+      <div>
+        <p className="text-sm font-medium mb-1">Example</p>
+        <p className="text-sm text-muted-foreground leading-relaxed">{EXAMPLES[calc]}</p>
+      </div>
+    </div>
+  )
+}
+
 export default function CalculatorPage() {
   const [active, setActive] = useState<Calc>("No-Vig Fair Odds")
 
@@ -616,7 +667,10 @@ export default function CalculatorPage() {
     <ProtectedRoute>
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold">{TITLES[active]}</h1>
+        <h1 className="text-2xl font-semibold">
+          {TITLES[active].split(" ").slice(0, -1).join(" ")}{" "}
+          <span className="text-primary">{TITLES[active].split(" ").at(-1)}</span>
+        </h1>
         <p className="text-sm text-muted-foreground mt-1">{DESCRIPTIONS[active]}</p>
       </div>
 
@@ -649,6 +703,7 @@ export default function CalculatorPage() {
         {active === "Point Spread" && <PointSpreadCalc />}
         {active === "Poisson" && <PoissonCalc />}
         {active === "Round Robin" && <RoundRobinCalc />}
+        <CalcInfo calc={active} />
       </div>
     </div>
     </ProtectedRoute>

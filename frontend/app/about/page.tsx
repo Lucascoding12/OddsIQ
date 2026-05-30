@@ -21,7 +21,7 @@ export default function AboutPage() {
       <div className="space-y-6">
         <div className="text-xs font-mono text-primary uppercase tracking-widest">Our Mission</div>
         <h1 className="text-4xl font-bold tracking-tight leading-tight">
-          Sportsbooks have been winning for too long.
+          Sportsbooks have been winning for <span className="text-primary">too long.</span>
         </h1>
         <div className="space-y-4 text-muted-foreground leading-relaxed">
           <p>

@@ -1,11 +1,20 @@
 import { Game } from "@/lib/mock-data"
 import { Button } from "@/components/ui/button"
 
-const SPORT_COLORS: Record<string, string> = {
-  NFL: "bg-slate-100 text-slate-600",
-  NBA: "bg-slate-100 text-slate-600",
-  MLB: "bg-slate-100 text-slate-600",
-  NHL: "bg-slate-100 text-slate-600",
+const CATEGORY_COLORS: Record<string, string> = {
+  "American Football": "bg-orange-950 text-orange-300",
+  "Basketball":        "bg-blue-950 text-blue-300",
+  "Baseball":          "bg-red-950 text-red-300",
+  "Hockey":            "bg-cyan-950 text-cyan-300",
+  "Soccer":            "bg-green-950 text-green-300",
+  "Tennis":            "bg-yellow-950 text-yellow-300",
+  "Combat Sports":     "bg-purple-950 text-purple-300",
+  "Cricket":           "bg-lime-950 text-lime-300",
+  "Rugby":             "bg-emerald-950 text-emerald-300",
+  "Golf":              "bg-teal-950 text-teal-300",
+  "Motorsports":       "bg-rose-950 text-rose-300",
+  "Esports":           "bg-violet-950 text-violet-300",
+  "Politics & Specials": "bg-slate-800 text-slate-300",
 }
 
 function formatOdds(odds: number) {
@@ -36,7 +45,7 @@ export function OddsTable({ games }: Props) {
                 {game.awayTeam} @ {game.homeTeam}
               </td>
               <td className="px-4 py-3">
-                <span className={`px-2 py-0.5 rounded text-xs font-medium ${SPORT_COLORS[game.sport]}`}>
+                <span className={`px-2 py-0.5 rounded text-xs font-medium ${CATEGORY_COLORS[game.category] ?? "bg-slate-800 text-slate-300"}`}>
                   {game.sport}
                 </span>
               </td>

@@ -37,8 +37,8 @@ export default function LandingPage() {
   return (
     <div className="min-h-[calc(100vh-56px)] flex flex-col">
 
-      {/* Hero */}
-      <div className="flex-1 flex flex-col items-center justify-center text-center px-4 py-24 space-y-8">
+      {/* Hero — full viewport height so nothing below peeks through */}
+      <div className="relative min-h-[calc(100vh-56px)] flex flex-col items-center justify-center text-center px-4 py-24 space-y-8">
         <div className="space-y-4 max-w-3xl">
           <div className="inline-block text-xs font-mono text-primary uppercase tracking-widest border border-primary/30 rounded-full px-3 py-1 bg-primary/5">
             Free. No paywalls. Ever.
@@ -71,6 +71,14 @@ export default function LandingPage() {
         <p className="text-xs text-muted-foreground">
           No credit card. No subscription. Just the tools.
         </p>
+
+        {/* Scroll hint */}
+        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex flex-col items-center gap-1.5 text-muted-foreground/40">
+          <div className="w-px h-8 bg-gradient-to-b from-transparent to-border" />
+          <svg width="12" height="7" viewBox="0 0 12 7" fill="none" className="opacity-60">
+            <path d="M1 1l5 5 5-5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+        </div>
       </div>
 
       {/* Feature grid */}

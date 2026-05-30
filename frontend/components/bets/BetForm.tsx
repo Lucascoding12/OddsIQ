@@ -14,10 +14,38 @@ function calcPnl(odds: number, stake: number, result: "win" | "loss" | "pending"
   return odds > 0 ? (stake * odds) / 100 : (stake * 100) / Math.abs(odds)
 }
 
-const SPORTS = ["NFL", "NBA", "MLB", "NHL"]
+const SPORTS = [
+  // American Football
+  "NFL", "NFL Preseason", "NCAAF", "CFL", "UFL",
+  // Basketball
+  "NBA", "WNBA", "NCAAB", "NCAAW", "EuroLeague", "NBA Summer League",
+  // Baseball
+  "MLB", "MLB Preseason", "NCAA Baseball", "MiLB", "NPB", "KBO",
+  // Hockey
+  "NHL", "AHL", "SHL", "HockeyAllsvenskan", "Liiga", "Mestis",
+  // Soccer
+  "EPL", "Champions League", "Europa League", "La Liga", "Bundesliga", "Serie A",
+  "Ligue 1", "MLS", "EFL Championship", "Liga MX", "Eredivisie", "Brazilian Serie A", "A-League",
+  // Tennis
+  "ATP Tour", "WTA Tour", "Grand Slams", "Challenger",
+  // Combat Sports
+  "UFC", "MMA", "Boxing",
+  // Cricket
+  "IPL", "Big Bash", "Test Cricket", "International Cricket",
+  // Rugby
+  "NRL", "Rugby Union",
+  // Golf
+  "PGA Tour", "Masters", "US Open Golf", "The Open Championship",
+  // Motorsports
+  "Formula 1",
+  // Esports
+  "Esports",
+  // Politics & Specials
+  "US Politics", "Special Markets",
+]
 
 export function BetForm({ onSubmit }: Props) {
-  const [form, setForm] = useState({ date: "", sport: "NFL", game: "", betType: "", odds: "", stake: "", result: "win" as "win" | "loss" })
+  const [form, setForm] = useState({ date: "", sport: "NFL", game: "", betType: "", odds: "", stake: "", result: "pending" as "win" | "loss" | "pending" })
 
   function set(field: string, value: string) {
     setForm((prev) => ({ ...prev, [field]: value }))
@@ -29,14 +57,14 @@ export function BetForm({ onSubmit }: Props) {
     const stake = Number(form.stake)
     const pnl = calcPnl(odds, stake, form.result)
     onSubmit({ date: form.date, sport: form.sport, game: form.game, betType: form.betType, odds, stake, result: form.result, pnl })
-    setForm({ date: "", sport: "NFL", game: "", betType: "", odds: "", stake: "", result: "win" as "win" | "loss" })
+    setForm({ date: "", sport: "NFL", game: "", betType: "", odds: "", stake: "", result: "pending" as "win" | "loss" | "pending" })
   }
 
   const previewPnl = form.odds && form.stake ? calcPnl(Number(form.odds), Number(form.stake), form.result) : null
 
   return (
     <form onSubmit={handleSubmit} className="rounded-lg border p-4 space-y-4">
-      <h2 className="font-semibold">Log a Bet</h2>
+      <h2 className="font-semibold">Log a <span className="text-primary">Bet</span></h2>
       <div className="grid grid-cols-3 gap-4">
         <div className="space-y-1.5">
           <Label>Date</Label>
@@ -68,7 +96,7 @@ export function BetForm({ onSubmit }: Props) {
 
       <div className="flex items-center gap-6">
         <div className="flex gap-3">
-          {(["win", "loss"] as const).map((r) => (
+          {(["pending", "win", "loss"] as const).map((r) => (
             <button
               key={r}
               type="button"

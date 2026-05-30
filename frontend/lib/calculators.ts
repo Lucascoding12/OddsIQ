@@ -17,10 +17,6 @@ export function decimalToAmerican(decimal: number): number {
   return -100 / (decimal - 1)
 }
 
-export function impliedProbFromDecimal(decimal: number): number {
-  return 1 / decimal
-}
-
 export function formatOdds(odds: number): string {
   if (!isFinite(odds)) return "N/A"
   return odds >= 0 ? `+${Math.round(odds)}` : `${Math.round(odds)}`
