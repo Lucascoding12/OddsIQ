@@ -18,8 +18,10 @@ if config.config_file_name is not None:
 
 target_metadata = Base.metadata
 
-# Override sqlalchemy.url with the value from our settings
-config.set_main_option("sqlalchemy.url", settings.database_url)
+# Override sqlalchemy.url with the value from our settings.
+# Use async_database_url to ensure asyncpg driver is specified —
+# Railway provides postgresql:// but asyncpg requires postgresql+asyncpg://.
+config.set_main_option("sqlalchemy.url", settings.async_database_url)
 
 
 def run_migrations_offline() -> None:
