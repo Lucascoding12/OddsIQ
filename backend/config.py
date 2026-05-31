@@ -5,6 +5,14 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
 
     database_url: str = "postgresql+asyncpg://oddsiq:oddsiq@localhost:5432/oddsiq"
+
+    @property
+    def async_database_url(self) -> str:
+        """Ensure the URL uses the asyncpg driver. Railway provides postgresql://, we need postgresql+asyncpg://."""
+        url = self.database_url
+        if url.startswith("postgresql://"):
+            url = url.replace("postgresql://", "postgresql+asyncpg://", 1)
+        return url
     redis_url: str = "redis://localhost:6379"
     odds_api_key: str = ""
     odds_api_base: str = "https://api.the-odds-api.com/v4"
