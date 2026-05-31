@@ -50,10 +50,14 @@ async def lifespan(app: FastAPI):
     except Exception as exc:
         logger.warning(f"Redis not reachable at startup: {exc} — odds board will be empty until Redis is up")
 
-    # Run one poll immediately so there's data on first request
+    # Run one poll immediately so there's data on first request.
+    # Wrapped in try/except so a Redis hiccup at startup doesn't kill the server.
     if settings.odds_api_key and settings.poll_interval_seconds < 99999:
         logger.info("Running initial odds poll...")
-        await poll_and_scan()
+        try:
+            await poll_and_scan()
+        except Exception as exc:
+            logger.warning(f"Initial poll failed (will retry on schedule): {exc}")
     else:
         logger.info(
             f"Skipping initial poll "
