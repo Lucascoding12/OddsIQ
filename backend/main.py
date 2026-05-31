@@ -87,7 +87,10 @@ app = FastAPI(title="OddsIQ API", version="0.1.0", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
+    # Allow localhost in dev + any Vercel deployment URL in prod.
+    # CORS_ORIGINS env var can override with a comma-separated list.
+    allow_origins=settings.cors_origins,
+    allow_origin_regex=r"https://.*\.vercel\.app",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
