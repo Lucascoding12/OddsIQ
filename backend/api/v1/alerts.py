@@ -1,32 +1,79 @@
-from fastapi import APIRouter
+"""
+Alerts endpoints — user price alerts stored in Postgres.
+"""
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from db.session import get_db
+from db.models import Alert as AlertModel
 
 router = APIRouter(tags=["alerts"])
 
+
 class AlertCreate(BaseModel):
-    game: str
-    betType: str
-    targetOdds: int
-    book: str
+    sport: str
+    team: str
+    market: str = "h2h"
+    targetOdds: float
+    direction: str = "above"  # above | below
+    note: str = ""
 
-class Alert(AlertCreate):
-    id: str
-    status: str
-    createdAt: str
 
-_alerts: list[Alert] = []
+class AlertOut(BaseModel):
+    id: int
+    sport: str
+    team: str
+    market: str
+    targetOdds: float
+    direction: str
+    active: bool
+    note: str
 
-@router.get("/alerts", response_model=list[Alert])
-def list_alerts():
-    return _alerts
+    model_config = {"from_attributes": True}
 
-@router.post("/alerts", response_model=Alert, status_code=201)
-def create_alert(body: AlertCreate):
-    alert = Alert(id=str(len(_alerts) + 1), status="active", createdAt="2026-05-29", **body.model_dump())
-    _alerts.append(alert)
-    return alert
+
+def _to_out(a: AlertModel) -> AlertOut:
+    return AlertOut(
+        id=a.id,
+        sport=a.sport,
+        team=a.team,
+        market=a.market,
+        targetOdds=a.target_odds,
+        direction=a.direction,
+        active=a.active,
+        note=a.note,
+    )
+
+
+@router.get("/alerts", response_model=list[AlertOut])
+async def list_alerts(db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(AlertModel).order_by(AlertModel.created_at.desc()))
+    return [_to_out(a) for a in result.scalars().all()]
+
+
+@router.post("/alerts", response_model=AlertOut, status_code=201)
+async def create_alert(body: AlertCreate, db: AsyncSession = Depends(get_db)):
+    alert = AlertModel(
+        sport=body.sport,
+        team=body.team,
+        market=body.market,
+        target_odds=body.targetOdds,
+        direction=body.direction,
+        note=body.note,
+    )
+    db.add(alert)
+    await db.commit()
+    await db.refresh(alert)
+    return _to_out(alert)
+
 
 @router.delete("/alerts/{alert_id}", status_code=204)
-def delete_alert(alert_id: str):
-    global _alerts
-    _alerts = [a for a in _alerts if a.id != alert_id]
+async def delete_alert(alert_id: int, db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(AlertModel).where(AlertModel.id == alert_id))
+    alert = result.scalar_one_or_none()
+    if not alert:
+        raise HTTPException(status_code=404, detail="Alert not found")
+    await db.delete(alert)
+    await db.commit()

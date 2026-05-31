@@ -4,9 +4,9 @@ import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Bet } from "@/lib/mock-data"
+import { type BetCreate } from "@/lib/api"
 
-type Props = { onSubmit: (bet: Omit<Bet, "id" | "closingOdds" | "clv">) => void }
+type Props = { onSubmit: (bet: BetCreate) => Promise<void> }
 
 function calcPnl(odds: number, stake: number, result: "win" | "loss" | "pending"): number {
   if (result === "pending") return 0
