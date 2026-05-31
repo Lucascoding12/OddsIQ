@@ -1,7 +1,8 @@
-import { Bet } from "@/lib/mock-data"
+import { type Bet } from "@/lib/api"
 import { Badge } from "@/components/ui/badge"
 
-function formatOdds(odds: number) {
+function formatOdds(odds: number | undefined | null) {
+  if (odds == null) return "—"
   return odds > 0 ? `+${odds}` : `${odds}`
 }
 
@@ -44,7 +45,7 @@ export function BetLogTable({ bets }: Props) {
               </td>
               <td className="px-4 py-3 text-right text-muted-foreground">{formatOdds(bet.closingOdds)}</td>
               <td className="px-4 py-3 text-right font-medium text-muted-foreground">
-                {bet.clv === 0 ? "-" : `${bet.clv > 0 ? "+" : ""}${bet.clv}`}
+                {!bet.clv ? "—" : `${bet.clv > 0 ? "+" : ""}${bet.clv}`}
               </td>
             </tr>
           ))}

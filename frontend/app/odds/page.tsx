@@ -1,14 +1,10 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { ProtectedRoute } from "@/components/ProtectedRoute"
+import { getOdds, type Game } from "@/lib/api"
 
-type SportCategory = {
-  label: string
-  sports: string[]
-}
-
-const SPORT_CATEGORIES: SportCategory[] = [
+const SPORT_CATEGORIES = [
   { label: "American Football", sports: ["NFL", "NFL Preseason", "NCAAF", "CFL", "UFL"] },
   { label: "Basketball", sports: ["NBA", "WNBA", "NCAAB", "NCAAW", "EuroLeague", "NBA Summer League"] },
   { label: "Baseball", sports: ["MLB", "MLB Preseason", "NCAA Baseball", "MiLB", "NPB", "KBO"] },
@@ -24,11 +20,86 @@ const SPORT_CATEGORIES: SportCategory[] = [
   { label: "Politics & Specials", sports: ["US Politics", "Special Markets"] },
 ]
 
+function formatOdds(o: number | null) {
+  if (o == null) return "—"
+  return o > 0 ? `+${o}` : `${o}`
+}
+
+function formatTime(iso: string) {
+  try {
+    return new Date(iso).toLocaleString(undefined, {
+      month: "short", day: "numeric", hour: "numeric", minute: "2-digit",
+    })
+  } catch {
+    return iso
+  }
+}
+
+function GameRow({ game }: { game: Game }) {
+  const home = game.bestLine.homeMoneyline
+  const away = game.bestLine.awayMoneyline
+  const homeFav = home !== null && away !== null && home < away
+
+  return (
+    <div className="grid grid-cols-[1fr_80px_120px_120px_120px_100px_80px] px-3 py-3 text-sm border-b border-border/40 hover:bg-muted/20 transition-colors">
+      <div>
+        <div className="font-medium truncate">{game.awayTeam} @ {game.homeTeam}</div>
+        <div className="text-[11px] text-muted-foreground mt-0.5">{formatTime(game.commenceTime)}</div>
+      </div>
+      <div className="text-xs text-muted-foreground self-center truncate">{game.sport}</div>
+      <div className="text-right self-center font-mono space-y-0.5">
+        <div className={homeFav ? "text-muted-foreground" : "text-foreground font-semibold"}>
+          {formatOdds(away)}
+        </div>
+        <div className={homeFav ? "text-foreground font-semibold" : "text-muted-foreground"}>
+          {formatOdds(home)}
+        </div>
+      </div>
+      <div className="text-right self-center text-muted-foreground text-xs">—</div>
+      <div className="text-right self-center text-muted-foreground text-xs">—</div>
+      <div className="text-right self-center text-xs text-muted-foreground truncate">
+        {game.bestLine.book}
+      </div>
+      <div />
+    </div>
+  )
+}
+
 export default function OddsBoardPage() {
   const [activeCategory, setActiveCategory] = useState<string>("All")
   const [activeSport, setActiveSport] = useState<string>("All")
+  const [games, setGames] = useState<Game[]>([])
+  const [loading, setLoading] = useState(true)
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
 
   const currentCategory = SPORT_CATEGORIES.find((c) => c.label === activeCategory)
+
+  const fetchGames = useCallback(async () => {
+    try {
+      const params: Record<string, string> = {}
+      if (activeSport !== "All") params.sport = activeSport
+      else if (activeCategory !== "All") params.category = activeCategory
+      const data = await getOdds(params)
+      setGames(data)
+      setLastUpdated(new Date())
+    } catch (err) {
+      console.error("Failed to fetch odds:", err)
+    } finally {
+      setLoading(false)
+    }
+  }, [activeCategory, activeSport])
+
+  // Fetch on mount and when filters change
+  useEffect(() => {
+    setLoading(true)
+    fetchGames()
+  }, [fetchGames])
+
+  // Auto-refresh every 30s
+  useEffect(() => {
+    const interval = setInterval(fetchGames, 30_000)
+    return () => clearInterval(interval)
+  }, [fetchGames])
 
   function handleCategoryClick(label: string) {
     setActiveCategory(label)
@@ -41,7 +112,7 @@ export default function OddsBoardPage() {
     <ProtectedRoute>
       <div className="flex gap-6 min-h-[calc(100vh-7rem)]">
 
-        {/* Left sidebar — category + league nav */}
+        {/* Left sidebar */}
         <aside className="w-52 shrink-0 space-y-1">
           <div className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground px-2 pb-2">
             Sports
@@ -78,14 +149,24 @@ export default function OddsBoardPage() {
           <div className="flex items-start justify-between">
             <div>
               <h1 className="text-xl font-semibold text-primary">{displaySport}</h1>
-              <p className="text-xs text-muted-foreground mt-0.5">Best available lines across all books · refreshes every 30s</p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Best available lines across all books · refreshes every 30s
+                {lastUpdated && (
+                  <span className="ml-2">· updated {lastUpdated.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit", second: "2-digit" })}</span>
+                )}
+              </p>
             </div>
-            <span className="text-[11px] text-muted-foreground border border-border rounded px-2 py-1 font-mono">
-              LIVE
-            </span>
+            <div className="flex items-center gap-2">
+              {loading && (
+                <span className="text-[11px] text-muted-foreground font-mono animate-pulse">loading…</span>
+              )}
+              <span className="text-[11px] text-muted-foreground border border-border rounded px-2 py-1 font-mono">
+                {games.length > 0 ? `${games.length} GAMES` : "LIVE"}
+              </span>
+            </div>
           </div>
 
-          {/* League sub-filter (only when a category is active) */}
+          {/* League sub-filter */}
           {currentCategory && (
             <div className="flex flex-wrap gap-1.5 border-b border-border pb-3">
               <button
@@ -125,15 +206,25 @@ export default function OddsBoardPage() {
             <span />
           </div>
 
-          {/* Empty state */}
-          <div className="flex flex-col items-center justify-center py-24 text-center border border-dashed border-border rounded-lg">
-            <div className="text-sm font-medium text-muted-foreground">No games available</div>
-            <div className="text-xs text-muted-foreground mt-1 max-w-xs">
-              {activeSport !== "All"
-                ? `No ${activeSport} events are currently scheduled.`
-                : "Connect an Odds API key to start pulling live lines."}
+          {/* Game rows or empty state */}
+          {!loading && games.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-24 text-center border border-dashed border-border rounded-lg">
+              <div className="text-sm font-medium text-muted-foreground">No games available</div>
+              <div className="text-xs text-muted-foreground mt-1 max-w-xs">
+                {activeSport !== "All"
+                  ? `No ${activeSport} events are currently scheduled.`
+                  : activeCategory !== "All"
+                  ? `No ${activeCategory} events are currently scheduled.`
+                  : "No live odds in cache. Trigger a poll from the API."}
+              </div>
             </div>
-          </div>
+          ) : (
+            <div className="rounded-lg border border-border overflow-hidden">
+              {games.map((game) => (
+                <GameRow key={game.id} game={game} />
+              ))}
+            </div>
+          )}
 
         </div>
       </div>

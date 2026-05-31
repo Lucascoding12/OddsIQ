@@ -1,10 +1,16 @@
+"""
+Odds endpoints.
+
+GET /odds          — all cached games (optionally filtered by sport_key or category)
+GET /odds/sports   — the full sport category tree
+GET /odds/arb-eligible — sports eligible for 2-way arb scanning
+"""
+import json
 from fastapi import APIRouter, Query
-from pydantic import BaseModel
 
 router = APIRouter(tags=["odds"])
 
 # Maps display sport name → The Odds API sport_key
-# https://the-odds-api.com/sports-odds-data/sports-apis.html
 SPORT_KEYS: dict[str, str] = {
     # American Football
     "NFL": "americanfootball_nfl",
@@ -78,6 +84,9 @@ SPORT_KEYS: dict[str, str] = {
     "Special Markets": "politics_us_presidential_election_winner",
 }
 
+# Reverse map: sport_key → display name
+SPORT_KEY_TO_NAME: dict[str, str] = {v: k for k, v in SPORT_KEYS.items()}
+
 SPORT_CATEGORIES: dict[str, list[str]] = {
     "American Football": ["NFL", "NFL Preseason", "NCAAF", "CFL", "UFL"],
     "Basketball": ["NBA", "WNBA", "NCAAB", "NCAAW", "EuroLeague", "NBA Summer League"],
@@ -95,7 +104,14 @@ SPORT_CATEGORIES: dict[str, list[str]] = {
     "Politics & Specials": ["US Politics", "Special Markets"],
 }
 
-# 2-way moneyline sports (safe for arb scanning)
+# Build reverse: sport_key → category name
+_SPORT_TO_CATEGORY: dict[str, str] = {}
+for _cat, _sports in SPORT_CATEGORIES.items():
+    for _s in _sports:
+        if _s in SPORT_KEYS:
+            _SPORT_TO_CATEGORY[SPORT_KEYS[_s]] = _cat
+
+# 2-way moneyline sports only (safe for arb scanning — no draws)
 ARB_ELIGIBLE_SPORTS: set[str] = {
     "NFL", "NFL Preseason", "NCAAF", "CFL", "UFL",
     "NBA", "WNBA", "NCAAB", "NCAAW", "EuroLeague", "NBA Summer League",
@@ -108,35 +124,99 @@ ARB_ELIGIBLE_SPORTS: set[str] = {
 }
 
 
-class BestLine(BaseModel):
-    homeMoneyline: int
-    awayMoneyline: int
-    spread: float
-    spreadOdds: int
-    total: float
-    overOdds: int
-    underOdds: int
-    book: str
+def _normalize_game(raw: dict) -> dict:
+    """
+    Convert a raw Odds API game dict to the shape the frontend expects.
+    Picks the best moneyline odds across all bookmakers.
+    """
+    sport_key = raw.get("sport_key", "")
+    sport_name = SPORT_KEY_TO_NAME.get(sport_key, sport_key)
+    category = _SPORT_TO_CATEGORY.get(sport_key, "Other")
+
+    # Find best h2h odds per outcome independently across all books.
+    # Best home = highest home price (most favorable for home bettors).
+    # Best away = highest away price (most favorable for away bettors).
+    # Best book = book with lowest combined implied probability (least vig / best value).
+    best_home: int | None = None
+    best_away: int | None = None
+    best_book = ""
+    lowest_vig: float | None = None
+
+    def _american_to_implied(price: int | float) -> float:
+        if price > 0:
+            return 100 / (price + 100)
+        return abs(price) / (abs(price) + 100)
+
+    for book in raw.get("bookmakers", []):
+        for market in book.get("markets", []):
+            if market.get("key") != "h2h":
+                continue
+            outcomes = {o["name"]: o["price"] for o in market.get("outcomes", [])}
+            home_odds = outcomes.get(raw.get("home_team", ""))
+            away_odds = outcomes.get(raw.get("away_team", ""))
+            if home_odds is None or away_odds is None:
+                continue
+
+            # Track best home and away independently
+            if best_home is None or home_odds > best_home:
+                best_home = home_odds
+            if best_away is None or away_odds > best_away:
+                best_away = away_odds
+
+            # Best book = lowest total implied prob (least vig)
+            total_implied = _american_to_implied(home_odds) + _american_to_implied(away_odds)
+            if lowest_vig is None or total_implied < lowest_vig:
+                lowest_vig = total_implied
+                best_book = book.get("title", book.get("key", ""))
+
+    return {
+        "id": raw.get("id"),
+        "sport": sport_name,
+        "sportKey": sport_key,
+        "category": category,
+        "homeTeam": raw.get("home_team"),
+        "awayTeam": raw.get("away_team"),
+        "commenceTime": raw.get("commence_time"),
+        "polledAt": raw.get("polled_at"),
+        "bestLine": {
+            "homeMoneyline": best_home,
+            "awayMoneyline": best_away,
+            "book": best_book,
+        },
+        "bookmakers": raw.get("bookmakers", []),
+    }
 
 
-class Game(BaseModel):
-    id: str
-    sport: str
-    sportKey: str
-    category: str
-    homeTeam: str
-    awayTeam: str
-    commenceTime: str
-    bestLine: BestLine
-
-
-@router.get("/odds", response_model=list[Game])
-def get_odds(
-    sport: str | None = Query(None, description="Filter by display sport name, e.g. 'NFL'"),
+@router.get("/odds")
+async def get_odds(
+    sport: str | None = Query(None, description="Filter by display name, e.g. 'NFL'"),
+    sport_key: str | None = Query(None, description="Filter by Odds API key, e.g. 'americanfootball_nfl'"),
     category: str | None = Query(None, description="Filter by category, e.g. 'Basketball'"),
 ):
-    # No live data yet — returns empty until odds poller is wired up
-    return []
+    """Return live odds from Redis cache. Empty list if not yet polled."""
+    from services.redis_client import get_redis
+
+    redis = await get_redis()
+
+    # Try sport-specific key first (cheaper), fall back to all
+    if sport_key:
+        raw = await redis.get(f"odds:sport:{sport_key}")
+    elif sport and sport in SPORT_KEYS:
+        raw = await redis.get(f"odds:sport:{SPORT_KEYS[sport]}")
+    else:
+        raw = await redis.get("odds:all")
+
+    if not raw:
+        return []
+
+    games: list[dict] = json.loads(raw)
+    normalized = [_normalize_game(g) for g in games]
+
+    # Apply category filter after normalization
+    if category:
+        normalized = [g for g in normalized if g["category"] == category]
+
+    return normalized
 
 
 @router.get("/odds/sports", response_model=dict[str, list[str]])

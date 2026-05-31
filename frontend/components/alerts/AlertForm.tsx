@@ -1,109 +1,71 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { type AlertCreate } from "@/lib/api"
 
-type LiveGame = {
-  id: string
-  homeTeam: string
-  awayTeam: string
-}
+type Props = { onSubmit: (alert: AlertCreate) => Promise<void> }
 
-type Props = { onSubmit: (alert: { game: string; betType: string; targetOdds: number; book: string }) => void }
-
-const BOOKS = ["Any Book", "DraftKings", "FanDuel", "BetMGM", "Caesars", "Pinnacle"]
-const BET_TYPES = ["Home ML", "Away ML", "Home Spread", "Away Spread", "Over", "Under"]
+const SPORTS = ["NFL", "NBA", "MLB", "NHL", "Tennis", "UFC", "MMA", "Boxing", "NCAAF", "NCAAB", "Soccer"]
+const MARKETS = ["h2h", "spreads", "totals"]
+const DIRECTIONS = ["above", "below"]
 
 export function AlertForm({ onSubmit }: Props) {
-  const [games, setGames] = useState<LiveGame[]>([])
-  const [loading, setLoading] = useState(true)
-  const [gameId, setGameId] = useState("")
-  const [betType, setBetType] = useState("Home ML")
+  const [sport, setSport] = useState("NFL")
+  const [team, setTeam] = useState("")
+  const [market, setMarket] = useState("h2h")
   const [targetOdds, setTargetOdds] = useState("")
-  const [book, setBook] = useState("Any Book")
-
-  useEffect(() => {
-    async function fetchGames() {
-      try {
-        const res = await fetch("http://localhost:8000/api/v1/odds")
-        if (!res.ok) throw new Error("Failed")
-        const data = await res.json()
-        const live: LiveGame[] = (data.games ?? []).map((g: { id: string; homeTeam: string; awayTeam: string }) => ({
-          id: g.id,
-          homeTeam: g.homeTeam,
-          awayTeam: g.awayTeam,
-        }))
-        setGames(live)
-        if (live.length > 0) setGameId(live[0].id)
-      } catch {
-        setGames([])
-      } finally {
-        setLoading(false)
-      }
-    }
-    fetchGames()
-  }, [])
-
-  function handleSubmit(e: React.FormEvent) {
-    e.preventDefault()
-    const selected = games.find((g) => g.id === gameId)
-    onSubmit({
-      game: selected ? `${selected.awayTeam} @ ${selected.homeTeam}` : gameId,
-      betType,
-      targetOdds: Number(targetOdds),
-      book,
-    })
-    setTargetOdds("")
-  }
+  const [direction, setDirection] = useState<"above" | "below">("above")
+  const [note, setNote] = useState("")
 
   const selectClass = "w-full border rounded-md px-3 py-1.5 text-sm bg-background text-foreground border-border"
 
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    await onSubmit({ sport, team, market, targetOdds: Number(targetOdds), direction, note })
+    setTeam("")
+    setTargetOdds("")
+    setNote("")
+  }
+
   return (
     <form onSubmit={handleSubmit} className="rounded-lg border p-4 space-y-4">
-      <h2 className="font-semibold">Create Alert</h2>
-
-      {loading ? (
-        <p className="text-sm text-muted-foreground">Loading live games...</p>
-      ) : games.length === 0 ? (
-        <p className="text-sm text-muted-foreground">
-          No live games available — connect your Odds API key to pull real games.
-        </p>
-      ) : (
-        <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-1.5">
-            <Label>Game</Label>
-            <select className={selectClass} value={gameId} onChange={(e) => setGameId(e.target.value)}>
-              {games.map((g) => (
-                <option key={g.id} value={g.id}>
-                  {g.awayTeam} @ {g.homeTeam}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="space-y-1.5">
-            <Label>Bet Type</Label>
-            <select className={selectClass} value={betType} onChange={(e) => setBetType(e.target.value)}>
-              {BET_TYPES.map((t) => <option key={t}>{t}</option>)}
-            </select>
-          </div>
-          <div className="space-y-1.5">
-            <Label>Target Odds</Label>
-            <Input type="number" placeholder="-110 or +150" value={targetOdds} onChange={(e) => setTargetOdds(e.target.value)} required />
-          </div>
-          <div className="space-y-1.5">
-            <Label>Book</Label>
-            <select className={selectClass} value={book} onChange={(e) => setBook(e.target.value)}>
-              {BOOKS.map((b) => <option key={b}>{b}</option>)}
-            </select>
-          </div>
+      <h2 className="font-semibold">Create <span className="text-primary">Alert</span></h2>
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-1.5">
+          <Label>Sport</Label>
+          <select className={selectClass} value={sport} onChange={(e) => setSport(e.target.value)}>
+            {SPORTS.map((s) => <option key={s}>{s}</option>)}
+          </select>
         </div>
-      )}
-
-      {!loading && games.length > 0 && (
-        <Button type="submit">Create Alert</Button>
-      )}
+        <div className="space-y-1.5">
+          <Label>Team / Player</Label>
+          <Input placeholder="e.g. Chiefs, Djokovic" value={team} onChange={(e) => setTeam(e.target.value)} required />
+        </div>
+        <div className="space-y-1.5">
+          <Label>Market</Label>
+          <select className={selectClass} value={market} onChange={(e) => setMarket(e.target.value)}>
+            {MARKETS.map((m) => <option key={m}>{m}</option>)}
+          </select>
+        </div>
+        <div className="space-y-1.5">
+          <Label>Target Odds (American)</Label>
+          <Input type="number" placeholder="+150 or -110" value={targetOdds} onChange={(e) => setTargetOdds(e.target.value)} required />
+        </div>
+        <div className="space-y-1.5">
+          <Label>Alert when odds go</Label>
+          <select className={selectClass} value={direction} onChange={(e) => setDirection(e.target.value as "above" | "below")}>
+            {DIRECTIONS.map((d) => <option key={d}>{d}</option>)}
+          </select>
+        </div>
+        <div className="space-y-1.5">
+          <Label>Note (optional)</Label>
+          <Input placeholder="e.g. wait for +140 or better" value={note} onChange={(e) => setNote(e.target.value)} />
+        </div>
+      </div>
+      <Button type="submit">Create Alert</Button>
     </form>
   )
 }

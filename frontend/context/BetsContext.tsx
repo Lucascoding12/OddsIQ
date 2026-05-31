@@ -1,32 +1,47 @@
 "use client"
 
-import { createContext, useContext, useState, ReactNode } from "react"
-import { Bet } from "@/lib/mock-data"
+import { createContext, useContext, useState, useEffect, ReactNode } from "react"
+import { getBets, createBet, deleteBet, type Bet, type BetCreate } from "@/lib/api"
 
 type BetsContextValue = {
   bets: Bet[]
-  addBet: (bet: Omit<Bet, "id" | "closingOdds" | "clv">) => void
-  updateBet: (id: string, updates: Partial<Bet>) => void
+  loading: boolean
+  addBet: (bet: BetCreate) => Promise<void>
+  removeBet: (id: number) => Promise<void>
+  refresh: () => Promise<void>
 }
 
 const BetsContext = createContext<BetsContextValue | null>(null)
 
 export function BetsProvider({ children }: { children: ReactNode }) {
   const [bets, setBets] = useState<Bet[]>([])
+  const [loading, setLoading] = useState(true)
 
-  function addBet(data: Omit<Bet, "id" | "closingOdds" | "clv">) {
-    setBets((prev) => [
-      { id: String(Date.now()), closingOdds: data.odds, clv: 0, ...data },
-      ...prev,
-    ])
+  async function refresh() {
+    try {
+      const data = await getBets()
+      setBets(data)
+    } catch (err) {
+      console.error("Failed to load bets:", err)
+    } finally {
+      setLoading(false)
+    }
   }
 
-  function updateBet(id: string, updates: Partial<Bet>) {
-    setBets((prev) => prev.map((b) => (b.id === id ? { ...b, ...updates } : b)))
+  useEffect(() => { refresh() }, [])
+
+  async function addBet(data: BetCreate) {
+    const newBet = await createBet(data)
+    setBets((prev) => [newBet, ...prev])
+  }
+
+  async function removeBet(id: number) {
+    await deleteBet(id)
+    setBets((prev) => prev.filter((b) => b.id !== id))
   }
 
   return (
-    <BetsContext.Provider value={{ bets, addBet, updateBet }}>
+    <BetsContext.Provider value={{ bets, loading, addBet, removeBet, refresh }}>
       {children}
     </BetsContext.Provider>
   )

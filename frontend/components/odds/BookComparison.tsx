@@ -1,4 +1,14 @@
-import { BookOdds } from "@/lib/mock-data"
+// BookOdds shape for line-shopping display
+type BookOdds = {
+  book: string
+  homeMoneyline: number
+  awayMoneyline: number
+  spread: number
+  spreadOdds: number
+  total: number
+  overOdds: number
+  underOdds: number
+}
 
 function formatOdds(odds: number) {
   return odds > 0 ? `+${odds}` : `${odds}`

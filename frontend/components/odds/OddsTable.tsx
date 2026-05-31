@@ -1,4 +1,4 @@
-import { Game } from "@/lib/mock-data"
+import { type Game } from "@/lib/api"
 import { Button } from "@/components/ui/button"
 
 const CATEGORY_COLORS: Record<string, string> = {
@@ -17,7 +17,8 @@ const CATEGORY_COLORS: Record<string, string> = {
   "Politics & Specials": "bg-slate-800 text-slate-300",
 }
 
-function formatOdds(odds: number) {
+function formatOdds(odds: number | null | undefined) {
+  if (odds == null) return "—"
   return odds > 0 ? `+${odds}` : `${odds}`
 }
 
@@ -50,18 +51,12 @@ export function OddsTable({ games }: Props) {
                 </span>
               </td>
               <td className="px-4 py-3 text-right font-mono text-xs">
-                <span className="text-blue-300 font-medium">{formatOdds(game.bestLine.homeMoneyline)}</span>
+                <span className="text-primary font-medium">{formatOdds(game.bestLine.homeMoneyline)}</span>
                 {" / "}
                 <span className="text-muted-foreground">{formatOdds(game.bestLine.awayMoneyline)}</span>
               </td>
-              <td className="px-4 py-3 text-right font-mono text-xs">
-                {game.bestLine.spread > 0 ? "+" : ""}{game.bestLine.spread}{" "}
-                <span className="text-muted-foreground">({formatOdds(game.bestLine.spreadOdds)})</span>
-              </td>
-              <td className="px-4 py-3 text-right font-mono text-xs">
-                {game.bestLine.total}{" "}
-                <span className="text-muted-foreground">(O/U {formatOdds(game.bestLine.overOdds)})</span>
-              </td>
+              <td className="px-4 py-3 text-right font-mono text-xs text-muted-foreground">—</td>
+              <td className="px-4 py-3 text-right font-mono text-xs text-muted-foreground">—</td>
               <td className="px-4 py-3 text-right text-muted-foreground text-xs">
                 {game.bestLine.book}
               </td>
