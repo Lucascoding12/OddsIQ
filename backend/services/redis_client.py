@@ -9,8 +9,8 @@ from config import settings
 
 _redis: aioredis.Redis | None = None
 
-ODDS_TTL = 90  # seconds — matches our poll interval with a small buffer
-ARB_TTL = 90
+ODDS_TTL = 7 * 3600  # 7 hours — outlasts the 6h poll interval so cache never goes empty
+ARB_TTL = 7 * 3600
 
 
 async def get_redis() -> aioredis.Redis:
