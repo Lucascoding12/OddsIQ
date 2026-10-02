@@ -29,6 +29,14 @@ class Settings(BaseSettings):
     # "us" covers DK/FD/MGM/Caesars/etc. Adding "us2" (ESPN Bet, Fliff, Hard Rock…)
     # or "eu"/"uk" finds more arbs but multiplies credit cost.
     odds_regions: str = "us"
+    # Explicit book list; takes priority over regions. Every 10 books costs
+    # the same as one region. The sharp books (first five) anchor +EV pricing;
+    # the rest are the US books you'd actually bet at.
+    odds_bookmakers: str = (
+        "pinnacle,betonlineag,lowvig,novig,prophetx,"
+        "draftkings,fanduel,betmgm,williamhill_us,fanatics,espnbet,betrivers,"
+        "hardrockbet,bovada,ballybet,fliff,betparx,betus,mybookieag,betanysports"
+    )
     # Explicit comma-separated sport keys. Empty → auto-discover in-season
     # sports via /sports, which is free (costs no credits).
     odds_sports: str = ""
@@ -46,6 +54,8 @@ class Settings(BaseSettings):
     # Also keep near-misses down to this return (%) so the UI can show
     # markets that are close to flipping into an arb.
     arb_near_miss_pct: float = -1.0
+    # +EV bets below this edge (%) aren't kept at all; the UI filters higher.
+    ev_floor_pct: float = 0.0
 
     @property
     def markets_list(self) -> list[str]:
@@ -54,6 +64,10 @@ class Settings(BaseSettings):
     @property
     def regions_list(self) -> list[str]:
         return [r.strip() for r in self.odds_regions.split(",") if r.strip()]
+
+    @property
+    def bookmakers_list(self) -> list[str]:
+        return [b.strip() for b in self.odds_bookmakers.split(",") if b.strip()]
 
     @property
     def sports_list(self) -> list[str]:

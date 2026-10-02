@@ -74,6 +74,14 @@ class OddsMathTest(unittest.TestCase):
         self.assertEqual(round_stakes([497.56, 502.44], 1), [498, 502])
         self.assertEqual(round_stakes([1.2], 5), [5])
 
+    def test_best_rounding_beats_nearest_rounding(self) -> None:
+        from services.odds_math import best_rounded_stakes
+        decimals = [american_to_decimal(-107), american_to_decimal(108)]
+        nearest = round_stakes(balanced_stakes(decimals, 500), 1)
+        best = best_rounded_stakes(decimals, 500, 1)
+        self.assertGreaterEqual(guaranteed_profit(best, decimals), guaranteed_profit(nearest, decimals))
+        self.assertTrue(all(float(s).is_integer() for s in best))
+
     def test_guaranteed_profit_is_worst_case(self) -> None:
         self.assertAlmostEqual(guaranteed_profit([100, 100], [2.1, 1.95]), -5.0)
 

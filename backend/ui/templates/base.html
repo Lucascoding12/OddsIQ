@@ -1,0 +1,286 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark">
+<title>{% block title %}OddsIQ{% endblock %}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --paper: #0B1B30;
+  --sheet: #10243F;
+  --well: #0A1628;
+  --ink: #E8EEF6;
+  --muted: #8A9DB5;
+  --rule: #1E3858;
+  --green: #3DDC97;
+  --green-ink: #062A1C;
+  --green-wash: #0F3A37;
+  --risk: #F2B544;
+  --risk-wash: #3A3020;
+  --focus: #7DB4FF;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font: 400 17px/1.45 "Barlow Semi Condensed", "Arial Narrow", system-ui, sans-serif;
+  font-variant-numeric: tabular-nums;
+}
+:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+a { color: inherit; }
+
+.top {
+  position: sticky; top: 0; z-index: 2;
+  background: var(--sheet);
+  border-bottom: 1px solid var(--rule);
+}
+.nav { display: flex; align-items: center; gap: 28px; padding: 12px 24px 0; }
+.brand { font-size: 24px; font-weight: 700; letter-spacing: -0.01em; }
+.brand .live { display: inline-block; width: 9px; height: 9px; margin-left: 8px; border-radius: 50%; background: var(--muted); vertical-align: middle; }
+.brand .live.on { background: var(--green); box-shadow: 0 0 0 4px var(--green-wash); }
+.tabs { display: flex; gap: 22px; }
+.tabs a {
+  padding: 6px 0 10px; text-decoration: none; font-size: 18px; font-weight: 600; color: var(--muted);
+  border-bottom: 3px solid transparent;
+}
+.tabs a[aria-current=page] { color: var(--ink); border-bottom-color: var(--green); }
+
+.bar { display: flex; flex-wrap: wrap; align-items: end; gap: 12px 20px; padding: 12px 24px 14px; border-top: 1px solid var(--rule); }
+.field { display: grid; gap: 2px; font-size: 14px; color: var(--muted); }
+.field input, .field select {
+  width: 104px; padding: 6px 8px;
+  font-family: inherit; font-size: 17px; font-weight: 600; color: var(--ink);
+  background: var(--well); border: 1px solid var(--rule); border-radius: 4px;
+}
+.field select { width: auto; }
+.check { display: flex; gap: 6px; align-items: center; font-size: 15px; color: var(--ink); }
+.check input { accent-color: var(--green); }
+details.books { font-size: 15px; }
+details.books summary { cursor: pointer; padding: 6px 0; }
+details.books .grid {
+  position: absolute; margin-top: 6px; padding: 12px 14px;
+  display: grid; grid-template-columns: repeat(2, minmax(150px, 1fr)); gap: 4px 16px;
+  background: var(--sheet); border: 1px solid var(--rule); border-radius: 6px;
+  max-height: 60vh; overflow: auto;
+}
+
+main { max-width: 1120px; margin: 0 auto; padding: 18px 24px 64px; }
+.intro { max-width: 72ch; margin: 0 0 14px; color: var(--muted); font-size: 15px; }
+#status { color: var(--muted); font-size: 15px; margin-bottom: 18px; }
+.status__err { display: block; color: var(--risk); }
+
+/* A row: big number on the left, details on the right. Shared by both boards. */
+.row {
+  display: grid; grid-template-columns: 148px 1fr; gap: 20px;
+  padding: 20px 0;
+  border-top: 1px solid var(--rule);
+}
+.row__big { font-size: 46px; font-weight: 700; line-height: 1; letter-spacing: -0.02em; color: var(--green); }
+.row__big span { font-size: 24px; margin-left: 1px; }
+.row__sub { margin-top: 6px; font-size: 16px; color: var(--muted); }
+.row__sub strong { color: var(--ink); font-size: 20px; }
+.row h2 { margin: 0; font-size: 21px; font-weight: 600; line-height: 1.2; }
+.row p { margin: 2px 0 0; color: var(--muted); font-size: 15px; }
+.row .warn { color: var(--risk); }
+.foot { margin: 10px 0 0; font-size: 15px; color: var(--muted); }
+.foot strong { color: var(--green); }
+
+.legs { list-style: none; margin: 12px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 10px; }
+.leg {
+  flex: 1 1 230px;
+  display: grid; grid-template-columns: 1fr auto; gap: 2px 12px; align-items: baseline;
+  padding: 10px 12px;
+  background: var(--sheet);
+  border: 1px solid var(--rule);
+  border-left: 4px solid var(--green);
+  border-radius: 3px;
+}
+.leg__book { font-weight: 700; }
+.leg__odds { font-size: 19px; font-weight: 700; text-align: right; }
+.leg__pick { grid-column: 1 / -1; color: var(--muted); }
+.stake {
+  justify-self: start; margin-top: 6px;
+  padding: 6px 12px;
+  font-family: inherit; font-size: 19px; font-weight: 700; line-height: 1;
+  color: var(--green-ink); background: var(--green);
+  border: 0; border-radius: 3px; cursor: copy;
+}
+.leg .stake { grid-column: 1 / -1; }
+.stake.copied::after { content: " copied"; font-weight: 500; font-size: 14px; }
+
+.row--risky .row__big { color: var(--risk); }
+.row--risky .leg { border-left-color: var(--risk); }
+.row--risky .stake { background: var(--risk); }
+.row--risky .foot strong { color: var(--risk); }
+
+.near h3 { margin: 40px 0 0; font-size: 17px; font-weight: 600; color: var(--muted); }
+.row--near { opacity: 0.6; padding: 12px 0; }
+.row--near .row__big { font-size: 28px; color: var(--muted); }
+.row--near .row__big span { font-size: 16px; }
+.row--near .leg { border-left-color: var(--rule); }
+.row--near .stake, .row--near .foot { display: none; }
+
+.empty { padding: 48px 0; font-size: 19px; color: var(--muted); border-top: 1px solid var(--rule); }
+
+.row.fresh { animation: fresh 2.4s ease-out; }
+@keyframes fresh { from { background: var(--green-wash); } to { background: transparent; } }
+@media (prefers-reduced-motion: reduce) { .row.fresh { animation: none; outline: 2px solid var(--green); } }
+
+@media (max-width: 680px) {
+  .top { position: static; }
+  .nav, .bar { padding-left: 16px; padding-right: 16px; }
+  .field input { width: 88px; }
+  details.books .grid { grid-template-columns: 1fr; left: 16px; right: 16px; }
+  main { padding: 12px 16px 48px; }
+  .row { grid-template-columns: 1fr; gap: 8px; }
+  .row__big { font-size: 38px; }
+}
+{% block style %}{% endblock %}
+</style>
+</head>
+<body>
+<header class="top">
+  <nav class="nav" aria-label="Pages">
+    <span class="brand">OddsIQ<span class="live" id="live" title="Live connection"></span></span>
+    <div class="tabs">
+      <a href="/" {% if page == "arbs" %}aria-current="page"{% endif %}>Arbs</a>
+      <a href="/ev" {% if page == "ev" %}aria-current="page"{% endif %}>+EV</a>
+    </div>
+  </nav>
+  <form class="bar" id="settings" autocomplete="off" onsubmit="return false">
+    {% block controls %}{% endblock %}
+    <details class="books">
+      <summary>Books <span id="book-count">(all)</span></summary>
+      <div class="grid">
+        {% for key, title in books %}
+        <label class="check"><input type="checkbox" name="book" value="{{ key }}" checked> {{ title }}</label>
+        {% else %}
+        <span>Books appear after the first poll.</span>
+        {% endfor %}
+      </div>
+    </details>
+    <label class="check"><input type="checkbox" name="hide_suspicious"> Hide risky</label>
+    <label class="check"><input type="checkbox" name="alert" checked> Alert on new</label>
+  </form>
+</header>
+
+<main>
+  {% block intro %}{% endblock %}
+  <div id="board" aria-live="polite"><p class="empty">Connecting…</p></div>
+</main>
+
+<script>
+// Settings live in the URL of the stream; the server renders everything else.
+const STREAM = "{{ stream }}";
+const STORE_KEY = "oddsiq.{{ page }}";
+const form = document.getElementById("settings");
+const board = document.getElementById("board");
+const live = document.getElementById("live");
+const LOCAL_ONLY = new Set(["alert", "book"]);
+let source, known = null;
+
+function load() {
+  try {
+    const s = JSON.parse(localStorage.getItem(STORE_KEY) || "{}");
+    for (const [k, v] of Object.entries(s)) {
+      if (k === "book") form.querySelectorAll("[name=book]").forEach(b => b.checked = v.length === 0 || v.includes(b.value));
+      else if (form.elements[k]?.type === "checkbox") form.elements[k].checked = v;
+      else if (form.elements[k]) form.elements[k].value = v;
+    }
+  } catch {}
+}
+
+function query() {
+  const all = [...form.querySelectorAll("[name=book]")];
+  const picked = all.filter(b => b.checked).map(b => b.value);
+  const saved = { book: picked.length === all.length ? [] : picked };
+  const p = new URLSearchParams();
+  for (const el of form.elements) {
+    if (!el.name || el.name === "book") continue;
+    const v = el.type === "checkbox" ? el.checked : el.value;
+    saved[el.name] = v;
+    if (LOCAL_ONLY.has(el.name)) continue;
+    if (el.type === "checkbox" && el.hasAttribute("value")) { if (el.checked) p.set(el.name, el.value); }
+    else if (v !== "") p.set(el.name, v);
+  }
+  try { localStorage.setItem(STORE_KEY, JSON.stringify(saved)); } catch {}
+  document.getElementById("book-count").textContent = saved.book.length ? `(${saved.book.length})` : "(all)";
+  if (saved.book.length) p.set("books", saved.book.join(","));
+  return p;
+}
+
+function connect() {
+  source?.close();
+  known = null;
+  source = new EventSource(STREAM + "?" + query());
+  source.addEventListener("board", e => { render(e.data); live.classList.add("on"); });
+  source.onerror = () => live.classList.remove("on");
+}
+
+function render(html) {
+  board.innerHTML = html;
+  const rows = [...board.querySelectorAll(".row[data-id]:not(.row--near)")];
+  const ids = new Set(rows.map(r => r.dataset.id));
+  if (known) {
+    const fresh = rows.filter(r => !known.has(r.dataset.id));
+    fresh.forEach(r => r.classList.add("fresh"));
+    if (fresh.length && form.elements.alert.checked) alertNew(fresh.length);
+  }
+  known = ids;
+  document.title = (ids.size ? `(${ids.size}) ` : "") + "{{ self.title() }}";
+  tick();
+}
+
+function alertNew(n) {
+  try {
+    const ctx = new AudioContext(), osc = ctx.createOscillator(), gain = ctx.createGain();
+    osc.frequency.value = 880; gain.gain.value = 0.08;
+    osc.connect(gain).connect(ctx.destination); osc.start(); osc.stop(ctx.currentTime + 0.18);
+  } catch {}
+  if ("Notification" in window && Notification.permission === "granted" && document.hidden)
+    new Notification(`${n} new on OddsIQ`, { body: "{{ alert_text }}" });
+}
+
+function ago(iso) {
+  const s = Math.max(0, (Date.now() - Date.parse(iso)) / 1000);
+  if (s < 60) return `${Math.floor(s)}s`;
+  if (s < 3600) return `${Math.floor(s / 60)}m`;
+  return `${Math.floor(s / 3600)}h ${Math.floor(s % 3600 / 60)}m`;
+}
+
+function tick() {
+  board.querySelectorAll("time[data-age]").forEach(t => t.textContent = ago(t.dataset.age));
+  board.querySelectorAll("time[data-local]:not([data-done])").forEach(t => {
+    t.textContent = new Date(t.dataset.local).toLocaleString([], { weekday: "short", hour: "numeric", minute: "2-digit" });
+    t.dataset.done = 1;
+  });
+}
+
+board.addEventListener("click", async e => {
+  const btn = e.target.closest("[data-copy]");
+  if (!btn) return;
+  try { await navigator.clipboard.writeText(btn.dataset.copy); } catch { return; }
+  btn.classList.add("copied");
+  setTimeout(() => btn.classList.remove("copied"), 1200);
+});
+
+let debounce;
+form.addEventListener("input", e => {
+  if (e.target.name === "alert") return;
+  clearTimeout(debounce); debounce = setTimeout(connect, 350);
+});
+form.elements.alert.addEventListener("change", e => {
+  if (e.target.checked && "Notification" in window && Notification.permission === "default") Notification.requestPermission();
+});
+
+load();
+connect();
+setInterval(tick, 1000);
+</script>
+</body>
+</html>

@@ -102,14 +102,14 @@ class UiTest(unittest.TestCase):
 
     def test_board_renders_stakes_and_escapes_names(self) -> None:
         from api.v1.arb import arb_query
-        from ui.routes import render_board
+        from ui.routes import render_arbs
         game = _arb_game()
         game["home_team"] = "<script>x</script>"
         game["bookmakers"][0]["markets"][0]["outcomes"][0]["name"] = "<script>x</script>"
         game["bookmakers"][1]["markets"][0]["outcomes"][0]["name"] = "<script>x</script>"
         store.update([game])
         q = arb_query(None, None, 0.0, None, 100.0, 1.0, False, False)
-        html = render_board(q)
+        html = render_arbs(q)
         self.assertIn("Bet $", html)
         self.assertIn("2 books quoting", html)
         self.assertNotIn("<script>x", html)

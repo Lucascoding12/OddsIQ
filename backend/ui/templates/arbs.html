@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block title %}OddsIQ arbs{% endblock %}
+{% block controls %}
+    <label class="field">Total stake ($)<input type="number" name="bankroll" value="100" min="1" step="any"></label>
+    <label class="field">Round stakes to ($)<input type="number" name="round_to" value="1" min="0" step="any"></label>
+    <label class="field">Min profit (%)<input type="number" name="min_profit_pct" value="0" min="0" step="0.1"></label>
+    <label class="check"><input type="checkbox" name="near"> Show near misses</label>
+{% endblock %}
+{% block intro %}
+  <p class="intro">Bet every leg below and you profit whichever side wins. Prices move fast, so place the legs back to back.</p>
+{% endblock %}

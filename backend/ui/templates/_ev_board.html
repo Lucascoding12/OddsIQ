@@ -1,0 +1,44 @@
+{% include "_status.html" %}
+
+<section aria-label="Positive expected value bets">
+  {% for b in bets %}
+  <article class="row{% if b.suspicious %} row--risky{% endif %}" data-id="{{ b.id }}">
+    <div>
+      <div class="row__big">{{ "%+.1f"|format(b.ev_pct) }}<span>%</span></div>
+      <div class="row__sub"><strong>{{ "%.0f"|format(b.fair_prob * 100) }}%</strong> to win</div>
+    </div>
+    <div>
+      <header>
+        <h2>{{ b.pick }}</h2>
+        <p>
+          {{ b.away_team }} at {{ b.home_team }}. {{ b.sport_title }}, {{ market_names.get(b.market, b.market) | lower }}.
+          Starts <time data-local="{{ b.commence_time }}">{{ b.commence_time }}</time>.
+          {% if b.first_seen %}Open for <time data-age="{{ b.first_seen }}"></time>.{% endif %}
+        </p>
+        <p>
+          Fair price {{ "%+d"|format(b.fair_odds) }} from {{ b.sharp_books | join(", ") }}
+          {%- if b.sharp_books | length == 1 %} only{% endif %}.
+          {% if b.also %}Also good at
+            {% for o in b.also %}{{ o.book_title }} {{ "%+d"|format(o.odds) }} ({{ "%+.1f"|format(o.ev_pct) }}%){{ ", " if not loop.last else "." }}{% endfor %}
+          {% endif %}
+        </p>
+        {% if b.suspicious %}<p class="warn">Check before betting: an edge this big usually means a stale line.</p>{% endif %}
+      </header>
+      <ol class="legs legs--single">
+        <li class="leg">
+          <span class="leg__book">{{ b.book_title }}</span>
+          <span class="leg__odds">{{ "%+d"|format(b.odds) }}</span>
+          {% if b.stake > 0 %}
+          <button class="stake" type="button" data-copy="{{ "%.2f"|format(b.stake) }}" title="Copy stake">Bet ${{ "{:,.2f}".format(b.stake) }}</button>
+          {% endif %}
+        </li>
+      </ol>
+      {% if b.stake > 0 %}
+      <p class="foot">Expected profit <strong>${{ "{:,.2f}".format(b.expected_profit) }}</strong> on average, sized by Kelly.</p>
+      {% endif %}
+    </div>
+  </article>
+  {% else %}
+  <p class="empty">No bets beat the sharp line right now. This list updates by itself on every odds refresh.</p>
+  {% endfor %}
+</section>

@@ -16,7 +16,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 
-from api.v1 import odds, alerts, bets, arb, sharp
+from api.v1 import odds, alerts, bets, arb, ev, sharp
 from config import settings
 from services.odds_poller import close_client, poll_all_odds, warm_start
 from services.odds_store import store
@@ -96,6 +96,7 @@ app.include_router(alerts.router, prefix="/api/v1")
 app.include_router(bets.router, prefix="/api/v1")
 app.include_router(arb.router, prefix="/api/v1")
 app.include_router(sharp.router, prefix="/api/v1")
+app.include_router(ev.router, prefix="/api/v1")
 app.include_router(ui.router)
 
 

@@ -20,7 +20,9 @@ from datetime import datetime, timezone
 from typing import Any, Callable
 
 from config import settings
-from services.arb_engine import ArbCandidate, ScanConfig, scan_games
+from services.arb_engine import ArbCandidate, arbs_from_grouped
+from services.ev_engine import EvBet, ev_from_grouped
+from services.markets import ScanConfig, group_game
 
 logger = logging.getLogger(__name__)
 
@@ -41,6 +43,7 @@ class OddsStore:
         self.polled_at: str | None = None
         self.version = 0
         self.arbs: list[ArbCandidate] = []
+        self.ev_bets: list[EvBet] = []
         self.scan_ms = 0.0
         self.stats = PollStats()
         # arb id → ISO time first observed; lets the UI show how long an arb has lived
@@ -59,24 +62,37 @@ class OddsStore:
     def update(self, games: list[dict], polled_at: str | None = None) -> None:
         """Swap in a new snapshot and rescan. Synchronous: callers never see a half-updated store."""
         start = time.perf_counter()
-        arbs = scan_games(games, self.default_scan_config())
+        cfg = self.default_scan_config()
+        now = time.time()
+        arbs: list[ArbCandidate] = []
+        ev_bets: list[EvBet] = []
+        # Group once per game; both engines read the same grouping.
+        for game in games:
+            gm = group_game(game, now, cfg)
+            if gm is None:
+                continue
+            arbs.extend(arbs_from_grouped(gm, cfg))
+            ev_bets.extend(ev_from_grouped(gm, cfg, settings.ev_floor_pct))
+        arbs.sort(key=lambda a: a.return_pct, reverse=True)
+        ev_bets.sort(key=lambda b: b.ev_pct, reverse=True)
         self.scan_ms = (time.perf_counter() - start) * 1000
 
         now_iso = datetime.now(timezone.utc).isoformat()
-        live_ids = {a.id for a in arbs}
+        live_ids = {a.id for a in arbs} | {b.id for b in ev_bets}
         self.first_seen = {k: v for k, v in self.first_seen.items() if k in live_ids}
-        for a in arbs:
-            self.first_seen.setdefault(a.id, now_iso)
+        for item in (*arbs, *ev_bets):
+            self.first_seen.setdefault(item.id, now_iso)
 
         self.games = games
         self.arbs = arbs
+        self.ev_bets = ev_bets
         self.polled_at = polled_at or now_iso
         self.version += 1
 
         profitable = sum(1 for a in arbs if a.return_pct > 0)
         logger.info(
             f"Store v{self.version}: {len(games)} games, {profitable} arbs "
-            f"({len(arbs) - profitable} near-misses), scan {self.scan_ms:.1f}ms"
+            f"({len(arbs) - profitable} near-misses), {len(ev_bets)} +EV, scan {self.scan_ms:.1f}ms"
         )
 
         # Wake everyone waiting, then arm a fresh event for the next update.
@@ -108,6 +124,7 @@ class OddsStore:
             "games": len(self.games),
             "arbs": sum(1 for a in self.arbs if a.return_pct > 0),
             "near_misses": sum(1 for a in self.arbs if a.return_pct <= 0),
+            "ev_bets": len(self.ev_bets),
             "scan_ms": round(self.scan_ms, 2),
             "fetch_ms": round(self.stats.fetch_ms, 1),
             "credits_remaining": self.stats.credits_remaining,

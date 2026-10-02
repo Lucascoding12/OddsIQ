@@ -1,0 +1,11 @@
+<div id="status" data-polled="{{ status.polled_at or '' }}">
+  {% if status.polled_at %}
+    {%- set n_sports = status.sports | length %}
+    Odds from <time data-age="{{ status.polled_at }}"></time> ago across {{ status.games }} games
+    {%- if n_sports %} ({{ n_sports }} sport{{ '' if n_sports == 1 else 's' }}){% endif %}, scanned in {{ status.scan_ms }} ms.
+    {% if status.credits_remaining is not none %}{{ "{:,}".format(status.credits_remaining) }} API credits left.{% endif %}
+  {% else %}
+    No odds loaded yet. Start polling with <code>POST /api/v1/admin/poll</code> or set <code>POLL_INTERVAL_SECONDS</code>.
+  {% endif %}
+  {% if status.last_error %}<span class="status__err">{{ status.last_error }}</span>{% endif %}
+</div>

@@ -14,6 +14,7 @@ ODDS_CREDIT_RESERVE the poller stops spending instead of draining the key.
 """
 import asyncio
 import logging
+import math
 import time
 from datetime import datetime, timezone
 
@@ -117,16 +118,17 @@ async def select_sports() -> list[str]:
 async def fetch_sport(sport_key: str) -> list[dict] | None:
     """Odds for one sport. [] when it has no events; None on failure."""
     try:
-        resp = await _get_client().get(
-            f"/sports/{sport_key}/odds",
-            params={
-                "apiKey": settings.odds_api_key,
-                "regions": ",".join(settings.regions_list),
-                "markets": ",".join(settings.markets_list),
-                "oddsFormat": "american",
-                "dateFormat": "iso",
-            },
-        )
+        params = {
+            "apiKey": settings.odds_api_key,
+            "markets": ",".join(settings.markets_list),
+            "oddsFormat": "american",
+            "dateFormat": "iso",
+        }
+        if settings.bookmakers_list:
+            params["bookmakers"] = ",".join(settings.bookmakers_list)
+        else:
+            params["regions"] = ",".join(settings.regions_list)
+        resp = await _get_client().get(f"/sports/{sport_key}/odds", params=params)
     except httpx.HTTPError as exc:
         logger.error(f"Fetch {sport_key} failed: {exc}")
         store.stats.last_error = f"{sport_key}: {exc}"
@@ -143,7 +145,9 @@ async def fetch_sport(sport_key: str) -> list[dict] | None:
 
 
 def _estimated_cost(n_sports: int) -> int:
-    return n_sports * len(settings.markets_list) * len(settings.regions_list)
+    books = settings.bookmakers_list
+    regions = math.ceil(len(books) / 10) if books else len(settings.regions_list)
+    return n_sports * len(settings.markets_list) * regions
 
 
 async def poll_all_odds() -> None:

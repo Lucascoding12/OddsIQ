@@ -1,8 +1,8 @@
 {% macro row(a, muted=false) -%}
-<article class="arb{% if muted %} arb--near{% endif %}{% if a.suspicious %} arb--risky{% endif %}" data-id="{{ a.id }}">
-  <div class="arb__pct">{{ "%+.2f"|format(a.profit_pct) }}<span>%</span></div>
-  <div class="arb__body">
-    <header class="arb__head">
+<article class="row{% if muted %} row--near{% endif %}{% if a.suspicious or (not muted and a.guaranteed_profit < 0) %} row--risky{% endif %}" data-id="{{ a.id }}">
+  <div class="row__big">{{ "%+.2f"|format(a.profit_pct) }}<span>%</span></div>
+  <div>
+    <header>
       <h2>{{ a.away_team }} at {{ a.home_team }}</h2>
       <p>
         {{ a.sport_title }}, {{ market_names.get(a.market, a.market) | lower }}
@@ -11,7 +11,7 @@
         {% if a.first_seen %}Open for <time data-age="{{ a.first_seen }}"></time>.{% endif %}
         {{ a.book_count }} book{{ '' if a.book_count == 1 else 's' }} quoting.
       </p>
-      {% if a.suspicious %}<p class="arb__warn">Check before betting: this looks like a stale line or a pricing error.</p>{% endif %}
+      {% if a.suspicious %}<p class="warn">Check before betting: this looks like a stale line or a pricing error.</p>{% endif %}
     </header>
     <ol class="legs">
       {% for leg in a.legs %}
@@ -19,32 +19,22 @@
         <span class="leg__book">{{ leg.book_title }}</span>
         <span class="leg__odds">{{ "%+d"|format(leg.odds) }}</span>
         <span class="leg__pick">{{ leg.outcome }}</span>
-        <button class="leg__stake" type="button" data-copy="{{ "%.2f"|format(leg.stake) }}" title="Copy stake">
+        <button class="stake" type="button" data-copy="{{ "%.2f"|format(leg.stake) }}" title="Copy stake">
           Bet ${{ "{:,.2f}".format(leg.stake) }}
         </button>
       </li>
       {% endfor %}
     </ol>
-    <p class="arb__foot">
+    <p class="foot">
       Stake ${{ "{:,.2f}".format(a.total_stake) }} total,
       {% if a.guaranteed_profit >= 0 %}keep at least <strong>${{ "{:,.2f}".format(a.guaranteed_profit) }}</strong> whichever side wins.
-      {% else %}short by ${{ "{:,.2f}".format(-a.guaranteed_profit) }} at current prices.{% endif %}
+      {% else %}but rounding loses ${{ "{:,.2f}".format(-a.guaranteed_profit) }}. Raise the total stake or round to a smaller amount.{% endif %}
     </p>
   </div>
 </article>
 {%- endmacro %}
 
-<div id="status" data-polled="{{ status.polled_at or '' }}">
-  {% if status.polled_at %}
-    {%- set n_sports = status.sports | length %}
-    Odds from <time data-age="{{ status.polled_at }}"></time> ago across {{ status.games }} games
-    {%- if n_sports %} ({{ n_sports }} sport{{ '' if n_sports == 1 else 's' }}){% endif %}, scanned in {{ status.scan_ms }} ms.
-    {% if status.credits_remaining is not none %}{{ "{:,}".format(status.credits_remaining) }} API credits left.{% endif %}
-  {% else %}
-    No odds loaded yet. Start polling with <code>POST /api/v1/admin/poll</code> or set <code>POLL_INTERVAL_SECONDS</code>.
-  {% endif %}
-  {% if status.last_error %}<span class="status__err">{{ status.last_error }}</span>{% endif %}
-</div>
+{% include "_status.html" %}
 
 <section aria-label="Arbitrage opportunities">
   {% for a in arbs %}{{ row(a) }}{% else %}

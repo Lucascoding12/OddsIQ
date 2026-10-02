@@ -20,9 +20,8 @@ from services.arb_engine import ArbCandidate, ScanConfig, scan_games, to_payload
 from services.odds_math import (
     american_to_decimal,
     arb_return_pct,
-    balanced_stakes,
+    best_rounded_stakes,
     guaranteed_profit,
-    round_stakes,
 )
 from services.odds_store import store
 
@@ -137,7 +136,7 @@ async def calc_arb(body: CalcRequest) -> dict:
     if any(-100 < o < 100 for o in body.odds):
         raise HTTPException(422, detail="American odds must be <= -100 or >= +100")
     decimals = [american_to_decimal(o) for o in body.odds]
-    stakes = round_stakes(balanced_stakes(decimals, body.bankroll), body.round_to)
+    stakes = best_rounded_stakes(decimals, body.bankroll, body.round_to)
     return {
         "is_arb": arb_return_pct(decimals) > 0,
         "profit_pct": round(arb_return_pct(decimals), 3),

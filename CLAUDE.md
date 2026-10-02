@@ -124,14 +124,18 @@ The Odds API  (/sports discovery is free; /odds costs markets × regions per spo
    [Poller — APScheduler, in the API process]   services/odds_poller.py
          |
    [OddsStore — in-memory snapshot, versioned]  services/odds_store.py
-         |  every update → arb scan (services/arb_engine.py, ~ms)
+         |  every update → one grouping pass (services/markets.py)
+         |                  → arb scan (services/arb_engine.py)
+         |                  → +EV scan (services/ev_engine.py)
          |  derived views memoized per version
          ├── Redis: write-through copy for warm restarts only
          |
    [FastAPI]
-     /                 server-rendered arb screen (ui/, Jinja2 + SSE)
-     /ui/stream        SSE: rendered board HTML on every update
+     /                 Arbs page (ui/, Jinja2 + SSE)
+     /ev               +EV page: soft-book prices vs the sharp fair line
+     /ui/stream, /ui/ev/stream   SSE: rendered board HTML on every update
      /api/v1/arb/*     JSON + SSE + manual calculator
+     /api/v1/ev        +EV bets with Kelly stakes
      /api/v1/status    credits, timings, last error
      /api/v1/odds, /sharp, /bets, /alerts  (used by the Next.js app)
 ```
@@ -147,6 +151,15 @@ still works against the same JSON API.
 - Applies exchange commission before pricing.
 - Flags returns > 8% or single-book "arbs" as suspicious (likely errors).
 - Return % = 1 / Σ(1/decimal) − 1, on total stake.
+- Stakes are rounded floor/ceil per leg, whichever keeps the most profit.
+
+### +EV engine rules
+- Sharp books (weights): Pinnacle 1.0, BetOnline/LowVig 0.6 (one family,
+  counted once), Novig 0.5, ProphetX 0.4, Betfair exchange 0.6. Chosen from
+  Pikkit's sharpness rankings; Circa and BookMaker aren't in The Odds API.
+- Each sharp book is de-vigged with the power method, then blended by weight.
+- EV = fair_prob × decimal − 1 for every non-sharp book; stakes use
+  fractional Kelly. Edges > 10% are flagged as likely stale lines.
 
 ---
 
