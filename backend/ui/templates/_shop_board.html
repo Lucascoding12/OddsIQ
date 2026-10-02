@@ -1,0 +1,33 @@
+{% include "_status.html" %}
+{% if not query %}
+  <p class="empty">Search a team to compare every book's price.</p>
+{% elif not games %}
+  <p class="empty">Nothing matches “{{ query }}”. Check the spelling, or drop the line number to see every line.</p>
+{% endif %}
+{% for g in games %}
+<article class="shop-game">
+  <h2>{{ g.game }}</h2>
+  <p>{{ g.sport_title }}. Starts <time data-local="{{ g.commence_time }}"></time>.</p>
+  {% for b in g.blocks %}
+    {% for side in b.sides %}
+    <div class="shop-side">
+      <h3>{{ b.market }}: {{ side.pick }}
+        {% if side.best %}<span class="best">best at {{ side.best.book_title }} {{ "%+d"|format(side.best.odds) }}</span>{% endif %}
+      </h3>
+      <div class="table-wrap"><table>
+        <tr><th>Book</th><th class="num">Odds</th><th class="num">Implied</th><th class="num">Edge vs sharp</th></tr>
+        {% for r in side.rows %}
+        <tr class="{{ 'top' if loop.first else '' }}">
+          <td>{{ r.book_title }} {% if r.sharp %}<span class="tag">Sharp</span>{% endif %}{% if r.after_fee %} <span class="small">ranked after exchange fee</span>{% endif %}</td>
+          <td class="num {{ 'good' if loop.first else ('bad' if loop.last and side.rows|length > 2 else '') }}">{{ "%+d"|format(r.odds) }}</td>
+          <td class="num">{{ "%.1f"|format(r.implied * 100) }}%</td>
+          <td class="num {{ 'good' if r.ev_pct is not none and r.ev_pct > 0 else '' }}">{% if r.ev_pct is not none %}{{ "%+.1f"|format(r.ev_pct) }}%{% else %}—{% endif %}</td>
+        </tr>
+        {% endfor %}
+      </table></div>
+      {% if side.fair_prob %}<p class="small">Fair price {{ "%.1f"|format(side.fair_prob * 100) }}% from {{ b.sharp_books | join(", ") }}.</p>{% endif %}
+    </div>
+    {% endfor %}
+  {% endfor %}
+</article>
+{% endfor %}

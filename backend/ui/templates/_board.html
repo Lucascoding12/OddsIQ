@@ -11,7 +11,11 @@
         {% if a.first_seen %}Open for <time data-age="{{ a.first_seen }}"></time>.{% endif %}
         {{ a.book_count }} book{{ '' if a.book_count == 1 else 's' }} quoting.
       </p>
-      {% if a.suspicious %}<p class="warn">Check before betting: this looks like a stale line or a pricing error.</p>{% endif %}
+      {% if not muted %}
+        {% if a.verified %}<p class="ok">Verified: every leg is confirmed by other books and was updated together.</p>{% endif %}
+        {% if a.suspicious %}<p class="warn">Check before betting: this looks like a stale line or a pricing error.</p>{% endif %}
+        {% for c in a.checks %}<p class="warn">{{ c }}</p>{% endfor %}
+      {% endif %}
     </header>
     <ol class="legs">
       {% for leg in a.legs %}

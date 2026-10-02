@@ -11,10 +11,13 @@ from typing import Callable
 
 from fastapi import APIRouter, Depends, Query, Request
 from fastapi.responses import HTMLResponse, StreamingResponse
+from starlette.exceptions import HTTPException
 from fastapi.templating import Jinja2Templates
 
 from api.v1.arb import SSE_KEEPALIVE_SECONDS, ArbQuery, arb_query, select_arbs
 from api.v1.ev import EvQuery, ev_query, select_ev
+from api.v1.tools import sharp_summary
+from services import calculators, line_shop
 from services.ev_engine import SHARP_WEIGHTS
 from services.odds_store import store
 
@@ -42,8 +45,8 @@ def render_arbs(q: ArbQuery) -> str:
     def compute() -> str:
         arbs = select_arbs(q)
         return templates.get_template("_board.html").render(
-            arbs=[a for a in arbs if a["profit_pct"] > 0],
-            near=[a for a in arbs if a["profit_pct"] <= 0],
+            arbs=[a for a in arbs if a["is_arb"]],
+            near=[a for a in arbs if not a["is_arb"]],
             status=store.status(),
             market_names=MARKET_NAMES,
         )
@@ -113,3 +116,62 @@ async def ev_stream(
 ) -> StreamingResponse:
     q = dataclasses.replace(q, min_prob=min_prob_pct / 100)
     return _sse(request, lambda: render_ev(q))
+
+
+def available_sports() -> list[tuple[str, str]]:
+    return store.memo("sports", lambda: sorted(
+        {(g.get("sport_key", ""), g.get("sport_title", g.get("sport_key", ""))) for g in store.games},
+        key=lambda kv: kv[1],
+    ))
+
+
+@router.get("/sharp", response_class=HTMLResponse)
+async def sharp_page(request: Request) -> HTMLResponse:
+    return templates.TemplateResponse(request, "sharp.html", {
+        "page": "sharp", "stream": "/ui/sharp/stream", "sports": available_sports(),
+        "sharp_names": SHARP_NAMES, "books": [],
+    })
+
+
+@router.get("/ui/sharp/stream")
+async def sharp_stream(request: Request, sport_key: str | None = Query(None)) -> StreamingResponse:
+    sport_key = sport_key or None
+    return _sse(request, lambda: store.memo(("sharp-board", sport_key), lambda: templates.get_template("_sharp_board.html").render(
+        status=store.status(), **sharp_summary(sport_key),
+    )))
+
+
+@router.get("/shop", response_class=HTMLResponse)
+async def shop_page(request: Request) -> HTMLResponse:
+    return templates.TemplateResponse(request, "shop.html", {
+        "page": "shop", "stream": "/ui/shop/stream", "books": [],
+        "teams": store.memo("teams", lambda: line_shop.suggestions(store.grouped)),
+    })
+
+
+@router.get("/ui/shop/stream")
+async def shop_stream(request: Request, q: str = Query("", max_length=100)) -> StreamingResponse:
+    query = q.strip()
+    return _sse(request, lambda: store.memo(("shop-board", query), lambda: templates.get_template("_shop_board.html").render(
+        status=store.status(), query=query, games=line_shop.search(store.grouped, query),
+    )))
+
+
+@router.get("/calc", response_class=HTMLResponse)
+async def calc_page(request: Request, c: str = Query("arbitrage")) -> HTMLResponse:
+    calc = calculators.BY_SLUG.get(c, calculators.BY_SLUG["arbitrage"])
+    result, error = calculators.run(calc, {})
+    return templates.TemplateResponse(request, "calc.html", {
+        "page": "calc", "stream": "", "books": [],
+        "calculators": calculators.CALCULATORS, "calc": calc,
+        "result_html": templates.get_template("_calc_result.html").render(result=result, error=error),
+    })
+
+
+@router.get("/ui/calc/{slug}", response_class=HTMLResponse)
+async def calc_result(request: Request, slug: str) -> HTMLResponse:
+    calc = calculators.BY_SLUG.get(slug)
+    if calc is None:
+        raise HTTPException(404)
+    result, error = calculators.run(calc, dict(request.query_params))
+    return HTMLResponse(templates.get_template("_calc_result.html").render(result=result, error=error))

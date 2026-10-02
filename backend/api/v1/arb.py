@@ -40,6 +40,7 @@ class ArbQuery:
     round_to: float
     include_live: bool
     hide_suspicious: bool
+    verified_only: bool = False
 
 
 def arb_query(
@@ -51,9 +52,10 @@ def arb_query(
     round_to: float = Query(0.0, ge=0, description="Round stakes to this increment, e.g. 1 or 5"),
     include_live: bool = Query(False),
     hide_suspicious: bool = Query(False),
+    verified_only: bool = Query(False, description="Only arbs that pass every sanity check"),
 ) -> ArbQuery:
     book_set = frozenset(b.strip() for b in books.split(",") if b.strip()) if books else None
-    return ArbQuery(sport_key, market, min_profit_pct, book_set or None, bankroll, round_to, include_live, hide_suspicious)
+    return ArbQuery(sport_key, market, min_profit_pct, book_set or None, bankroll, round_to, include_live, hide_suspicious, verified_only)
 
 
 def _candidates(q: ArbQuery) -> list[ArbCandidate]:
@@ -76,6 +78,10 @@ def select_arbs(q: ArbQuery) -> list[dict]:
         for c in _candidates(q):
             if c.return_pct < q.min_profit_pct:
                 break  # sorted best-first
+            if q.min_profit_pct >= 0 and not c.is_arb:
+                break  # break-even isn't an arb; only near-miss views go below
+            if q.verified_only and (c.checks or c.suspicious):
+                continue
             if q.sport_key and c.sport_key != q.sport_key:
                 continue
             if q.market and c.market != q.market:

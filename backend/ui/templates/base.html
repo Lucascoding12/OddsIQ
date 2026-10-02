@@ -43,7 +43,8 @@ a { color: inherit; }
 .brand { font-size: 24px; font-weight: 700; letter-spacing: -0.01em; }
 .brand .live { display: inline-block; width: 9px; height: 9px; margin-left: 8px; border-radius: 50%; background: var(--muted); vertical-align: middle; }
 .brand .live.on { background: var(--green); box-shadow: 0 0 0 4px var(--green-wash); }
-.tabs { display: flex; gap: 22px; }
+.tabs { display: flex; gap: 22px; overflow-x: auto; }
+.tabs a { white-space: nowrap; }
 .tabs a {
   padding: 6px 0 10px; text-decoration: none; font-size: 18px; font-weight: 600; color: var(--muted);
   border-bottom: 3px solid transparent;
@@ -87,6 +88,7 @@ main { max-width: 1120px; margin: 0 auto; padding: 18px 24px 64px; }
 .row h2 { margin: 0; font-size: 21px; font-weight: 600; line-height: 1.2; }
 .row p { margin: 2px 0 0; color: var(--muted); font-size: 15px; }
 .row .warn { color: var(--risk); }
+.row .ok { color: var(--green); }
 .foot { margin: 10px 0 0; font-size: 15px; color: var(--muted); }
 .foot strong { color: var(--green); }
 
@@ -125,6 +127,22 @@ main { max-width: 1120px; margin: 0 auto; padding: 18px 24px 64px; }
 .row--near .leg { border-left-color: var(--rule); }
 .row--near .stake, .row--near .foot { display: none; }
 
+/* Tables: sharp metrics, line shopping, calculators */
+.section { margin: 0 0 40px; }
+.section > h2 { margin: 0 0 4px; font-size: 22px; font-weight: 700; }
+.section > p { margin: 0 0 12px; color: var(--muted); font-size: 15px; max-width: 72ch; }
+.table-wrap { overflow-x: auto; border: 1px solid var(--rule); border-radius: 4px; background: var(--sheet); }
+table { width: 100%; border-collapse: collapse; font-size: 16px; }
+th { text-align: left; font-weight: 600; font-size: 14px; color: var(--muted); padding: 8px 12px; border-bottom: 1px solid var(--rule); white-space: nowrap; }
+td { padding: 8px 12px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+tr:last-child td { border-bottom: 0; }
+td.num, th.num { text-align: right; white-space: nowrap; }
+.good { color: var(--green); font-weight: 600; }
+.bad { color: #F07A7A; }
+.tag { display: inline-block; padding: 1px 7px; border-radius: 3px; font-size: 13px; font-weight: 700; background: var(--green-wash); color: var(--green); }
+.tag--risk { background: var(--risk-wash); color: var(--risk); }
+.small { font-size: 14px; color: var(--muted); }
+
 .empty { padding: 48px 0; font-size: 19px; color: var(--muted); border-top: 1px solid var(--rule); }
 
 .row.fresh { animation: fresh 2.4s ease-out; }
@@ -146,14 +164,18 @@ main { max-width: 1120px; margin: 0 auto; padding: 18px 24px 64px; }
 <body>
 <header class="top">
   <nav class="nav" aria-label="Pages">
-    <span class="brand">OddsIQ<span class="live" id="live" title="Live connection"></span></span>
+    <span class="brand">OddsIQ{% if stream %}<span class="live" id="live" title="Live connection"></span>{% endif %}</span>
     <div class="tabs">
       <a href="/" {% if page == "arbs" %}aria-current="page"{% endif %}>Arbs</a>
       <a href="/ev" {% if page == "ev" %}aria-current="page"{% endif %}>+EV</a>
+      <a href="/shop" {% if page == "shop" %}aria-current="page"{% endif %}>Line shop</a>
+      <a href="/sharp" {% if page == "sharp" %}aria-current="page"{% endif %}>Sharp</a>
+      <a href="/calc" {% if page == "calc" %}aria-current="page"{% endif %}>Calculators</a>
     </div>
   </nav>
   <form class="bar" id="settings" autocomplete="off" onsubmit="return false">
     {% block controls %}{% endblock %}
+    {% block filters %}
     <details class="books">
       <summary>Books <span id="book-count">(all)</span></summary>
       <div class="grid">
@@ -166,14 +188,16 @@ main { max-width: 1120px; margin: 0 auto; padding: 18px 24px 64px; }
     </details>
     <label class="check"><input type="checkbox" name="hide_suspicious"> Hide risky</label>
     <label class="check"><input type="checkbox" name="alert" checked> Alert on new</label>
+    {% endblock %}
   </form>
 </header>
 
 <main>
   {% block intro %}{% endblock %}
-  <div id="board" aria-live="polite"><p class="empty">Connecting…</p></div>
+  {% block main %}<div id="board" aria-live="polite"><p class="empty">Connecting…</p></div>{% endblock %}
 </main>
 
+{% if stream %}
 <script>
 // Settings live in the URL of the stream; the server renders everything else.
 const STREAM = "{{ stream }}";
@@ -209,7 +233,8 @@ function query() {
     else if (v !== "") p.set(el.name, v);
   }
   try { localStorage.setItem(STORE_KEY, JSON.stringify(saved)); } catch {}
-  document.getElementById("book-count").textContent = saved.book.length ? `(${saved.book.length})` : "(all)";
+  const count = document.getElementById("book-count");
+  if (count) count.textContent = saved.book.length ? `(${saved.book.length})` : "(all)";
   if (saved.book.length) p.set("books", saved.book.join(","));
   return p;
 }
@@ -229,7 +254,7 @@ function render(html) {
   if (known) {
     const fresh = rows.filter(r => !known.has(r.dataset.id));
     fresh.forEach(r => r.classList.add("fresh"));
-    if (fresh.length && form.elements.alert.checked) alertNew(fresh.length);
+    if (fresh.length && form.elements.alert?.checked) alertNew(fresh.length);
   }
   known = ids;
   document.title = (ids.size ? `(${ids.size}) ` : "") + "{{ self.title() }}";
@@ -274,7 +299,7 @@ form.addEventListener("input", e => {
   if (e.target.name === "alert") return;
   clearTimeout(debounce); debounce = setTimeout(connect, 350);
 });
-form.elements.alert.addEventListener("change", e => {
+form.elements.alert?.addEventListener("change", e => {
   if (e.target.checked && "Notification" in window && Notification.permission === "default") Notification.requestPermission();
 });
 
@@ -282,5 +307,7 @@ load();
 connect();
 setInterval(tick, 1000);
 </script>
+{% endif %}
+{% block script %}{% endblock %}
 </body>
 </html>

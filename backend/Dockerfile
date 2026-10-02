@@ -16,4 +16,4 @@ COPY . .
 
 # Run DB migrations then start the server.
 # Railway injects $PORT; fall back to 8000 for local use.
-CMD ["sh", "-c", "uv run alembic upgrade head && uv run uvicorn main:app --host 0.0.0.0 --port ${PORT:-8000}"]
+CMD ["sh", "-c", "uv run alembic upgrade head && uv run uvicorn main:app --host 0.0.0.0 --port ${PORT:-8000} --timeout-graceful-shutdown 5"]

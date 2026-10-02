@@ -1,0 +1,16 @@
+{% if error %}
+<p class="calc-error">{{ error }}</p>
+{% else %}
+<div class="metrics">
+  {% for label, value, tone in result.metrics %}
+  <div class="metric"><span>{{ label }}</span><strong class="{{ tone or '' }}">{{ value }}</strong></div>
+  {% endfor %}
+</div>
+{% for n in result.notes %}<p class="calc-error">{{ n }}</p>{% endfor %}
+{% if result.rows %}
+<div class="table-wrap"><table>
+  <tr>{% for h in result.headers %}<th class="{{ '' if loop.first else 'num' }}">{{ h }}</th>{% endfor %}</tr>
+  {% for row in result.rows %}<tr>{% for cell in row %}<td class="{{ '' if loop.first else 'num' }}">{{ cell }}</td>{% endfor %}</tr>{% endfor %}
+</table></div>
+{% endif %}
+{% endif %}

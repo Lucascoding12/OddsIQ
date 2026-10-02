@@ -199,6 +199,44 @@ class ScanGameTest(unittest.TestCase):
         self.assertEqual([a.game_id for a in arbs], ["g2", "g1"])
 
 
+class VerifyTest(unittest.TestCase):
+    def test_clean_arb_is_verified(self) -> None:
+        game = _game([
+            _book("dk", [_h2h({"Yankees": 105, "Red Sox": -120})]),
+            _book("fd", [_h2h({"Yankees": -125, "Red Sox": 103})]),
+            _book("mgm", [_h2h({"Yankees": 102, "Red Sox": 100})]),
+        ])
+        [arb] = scan_game(game, NOW, OPEN)
+        self.assertEqual(arb.checks, ())
+        self.assertTrue(to_payload(arb)["verified"])
+
+    def test_outlier_leg_flagged(self) -> None:
+        game = _game([
+            _book("dk", [_h2h({"Yankees": 150, "Red Sox": -120})]),
+            _book("fd", [_h2h({"Yankees": -125, "Red Sox": 103})]),
+            _book("mgm", [_h2h({"Yankees": 105, "Red Sox": 100})]),
+        ])
+        [arb] = scan_game(game, NOW, OPEN)
+        self.assertTrue(any("far above" in c for c in arb.checks))
+
+    def test_exchange_leg_flagged(self) -> None:
+        game = _game([
+            _book("dk", [_h2h({"Yankees": 105, "Red Sox": -120})]),
+            _book("novig", [_h2h({"Yankees": -125, "Red Sox": 103})]),
+            _book("mgm", [_h2h({"Yankees": 102, "Red Sox": 100})]),
+        ])
+        [arb] = scan_game(game, NOW, OPEN)
+        self.assertTrue(any("exchange" in c for c in arb.checks))
+
+    def test_break_even_is_not_an_arb(self) -> None:
+        game = _game([
+            _book("dk", [_h2h({"Yankees": 102, "Red Sox": -130})]),
+            _book("fd", [_h2h({"Yankees": -130, "Red Sox": -102})]),
+        ])
+        [c] = scan_game(game, NOW, OPEN)
+        self.assertFalse(c.is_arb)
+
+
 class PayloadTest(unittest.TestCase):
     def test_rounded_stakes_and_profit(self) -> None:
         game = _game([

@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block title %}OddsIQ sharp{% endblock %}
+{% block controls %}
+    <label class="field">Sport
+      <select name="sport_key">
+        <option value="">All sports</option>
+        {% for key, title in sports %}<option value="{{ key }}">{{ title }}</option>{% endfor %}
+      </select>
+    </label>
+{% endblock %}
+{% block filters %}{% endblock %}
+{% block intro %}
+  <p class="intro">How the sharp books ({{ sharp_names }}) price games compared with everyone else. Updates on every odds refresh.</p>
+{% endblock %}

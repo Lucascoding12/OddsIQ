@@ -3,5 +3,5 @@ dockerfilePath = "backend/Dockerfile"
 watchPatterns = ["backend/**"]
 
 [deploy]
-startCommand = "sh -c 'uv run alembic upgrade head && uv run uvicorn main:app --host 0.0.0.0 --port ${PORT:-8000}'"
+startCommand = "sh -c 'uv run alembic upgrade head && uv run uvicorn main:app --host 0.0.0.0 --port ${PORT:-8000} --timeout-graceful-shutdown 5'"
 restartPolicyType = "on_failure"

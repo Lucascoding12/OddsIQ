@@ -128,14 +128,19 @@ The Odds API  (/sports discovery is free; /odds costs markets × regions per spo
          |                  → arb scan (services/arb_engine.py)
          |                  → +EV scan (services/ev_engine.py)
          |  derived views memoized per version
-         ├── Redis: write-through copy for warm restarts only
+         ├── Redis + backend/.cache/odds_snapshot.json: warm-restart copies
+         |   (a fresh snapshot skips the startup poll, saving credits)
          |
    [FastAPI]
      /                 Arbs page (ui/, Jinja2 + SSE)
      /ev               +EV page: soft-book prices vs the sharp fair line
+     /shop             Line shopping: search a bet, every book ranked
+     /sharp            Sharp vs public, line moves/steam, disagreement, book holds
+     /calc             15 calculators (services/calculators.py)
      /ui/stream, /ui/ev/stream   SSE: rendered board HTML on every update
      /api/v1/arb/*     JSON + SSE + manual calculator
      /api/v1/ev        +EV bets with Kelly stakes
+     /api/v1/shop, /sharp/summary, /calc/{slug}   JSON for the same tools
      /api/v1/status    credits, timings, last error
      /api/v1/odds, /sharp, /bets, /alerts  (used by the Next.js app)
 ```
@@ -152,6 +157,9 @@ still works against the same JSON API.
 - Flags returns > 8% or single-book "arbs" as suspicious (likely errors).
 - Return % = 1 / Σ(1/decimal) − 1, on total stake.
 - Stakes are rounded floor/ceil per leg, whichever keeps the most profit.
+- Each arb is checked: outlier leg (>5% above every other book), lone quote,
+  exchange leg (liquidity), legs updated >10 min apart. No checks = Verified.
+- Returns under 0.01% are break-even, not arbs.
 
 ### +EV engine rules
 - Sharp books (weights): Pinnacle 1.0, BetOnline/LowVig 0.6 (one family,

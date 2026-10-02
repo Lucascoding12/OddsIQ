@@ -17,6 +17,7 @@ import logging
 import math
 import time
 from datetime import datetime, timezone
+from pathlib import Path
 
 import httpx
 import orjson
@@ -48,6 +49,8 @@ DISCOVERY_GROUPS = {
     "Soccer", "Mixed Martial Arts", "Boxing", "Tennis",
 }
 DISCOVERY_TTL_SECONDS = 3600
+# Local fallback when Redis isn't available (e.g. dev), so restarts don't re-spend credits.
+SNAPSHOT_FILE = Path(__file__).resolve().parent.parent / ".cache" / "odds_snapshot.json"
 
 _client: httpx.AsyncClient | None = None
 _poll_lock = asyncio.Lock()
@@ -193,23 +196,44 @@ async def poll_all_odds() -> None:
 
 
 async def _persist(games: list[dict], polled_at: str) -> None:
-    """Best-effort Redis copy for warm restarts; the API never reads it per request."""
+    """Best-effort copies for warm restarts; the API never reads them per request."""
+    payload = orjson.dumps(games)
+    try:
+        SNAPSHOT_FILE.parent.mkdir(parents=True, exist_ok=True)
+        SNAPSHOT_FILE.write_bytes(orjson.dumps({"polled_at": polled_at, "games": orjson.Fragment(payload)}))
+    except OSError as exc:
+        logger.warning(f"Snapshot file write failed: {exc}")
     try:
         redis = await get_redis()
-        await redis.setex("odds:all", ODDS_TTL, orjson.dumps(games))
+        await redis.setex("odds:all", ODDS_TTL, payload)
         await redis.setex("odds:polled_at", ODDS_TTL, polled_at)
     except Exception as exc:
         logger.warning(f"Redis persist failed: {exc}")
 
 
 async def warm_start() -> None:
-    """Load the last snapshot from Redis so the board isn't empty after a restart."""
+    """Load the last snapshot (Redis first, then the local file) so a restart starts with data."""
+    raw = polled_at = None
     try:
         redis = await get_redis()
         raw = await redis.get("odds:all")
         polled_at = await redis.get("odds:polled_at")
     except Exception as exc:
-        logger.warning(f"Warm start skipped, Redis unavailable: {exc}")
-        return
+        logger.warning(f"Redis unavailable for warm start: {exc}")
     if raw:
         store.update(orjson.loads(raw), polled_at)
+        return
+    if SNAPSHOT_FILE.exists():
+        try:
+            snap = orjson.loads(SNAPSHOT_FILE.read_bytes())
+        except (OSError, orjson.JSONDecodeError) as exc:
+            logger.warning(f"Snapshot file unreadable: {exc}")
+            return
+        store.update(snap["games"], snap["polled_at"])
+        logger.info(f"Warm start from {SNAPSHOT_FILE.name} (polled {snap['polled_at']})")
+
+
+def snapshot_age_seconds() -> float | None:
+    if not store.polled_at:
+        return None
+    return time.time() - datetime.fromisoformat(store.polled_at).timestamp()

@@ -11,12 +11,20 @@ in-memory snapshot, so it runs in milliseconds and needs no I/O.
 from dataclasses import dataclass
 from datetime import datetime, timezone
 
-from services.markets import GameMarkets, Quote, ScanConfig, group_game, label
+from services.markets import EXCHANGE_COMMISSION, GameMarkets, Quote, ScanConfig, group_game, label, parse_ts
 from services.odds_math import arb_return_pct, best_rounded_stakes, guaranteed_profit
 
 # Returns this high are nearly always a stale line or a palpable error that
 # the book will void. Shown, but flagged so nobody fires blind.
 SUSPICIOUS_RETURN_PCT = 8.0
+
+# Below this, rounding errors and price ticks make "arbs" break-even at best.
+MIN_REAL_RETURN_PCT = 0.01
+# A leg priced this much above every other book (in decimal odds) is usually
+# a line the book hasn't moved yet, and tends to get pulled or voided.
+OUTLIER_MARGIN = 0.05
+# Legs last confirmed this far apart may not have coexisted.
+MAX_LEG_SKEW_SECONDS = 600
 
 
 @dataclass(slots=True)
@@ -34,6 +42,36 @@ class ArbCandidate:
     return_pct: float
     book_count: int
     suspicious: bool
+    # Plain-language reasons to double-check before betting; empty = verified.
+    checks: tuple[str, ...] = ()
+
+    @property
+    def is_arb(self) -> bool:
+        return self.return_pct >= MIN_REAL_RETURN_PCT
+
+
+def verify_legs(legs: tuple[Quote, ...], by_book: dict[str, dict[str, Quote]]) -> tuple[str, ...]:
+    """
+    Sanity checks that separate a bettable arb from a data artifact:
+      - outlier: one book far above every other book on that side (stale line)
+      - lone quote: nobody else prices that side, so nothing corroborates it
+      - exchange leg: the posted price may only be good for a small amount
+      - timing: legs last updated far apart may never have coexisted
+    """
+    checks: list[str] = []
+    for q in legs:
+        others = [quotes[q.selection].decimal for book, quotes in by_book.items()
+                  if book != q.book and q.selection in quotes]
+        if not others:
+            checks.append(f"Only {q.book_title} quotes {q.selection}; nothing confirms the price.")
+        elif q.decimal / max(others) - 1 > OUTLIER_MARGIN:
+            checks.append(f"{q.book_title} is far above every other book on {q.selection}; the line may be stale.")
+        if q.book in EXCHANGE_COMMISSION:
+            checks.append(f"{q.book_title} is an exchange; confirm enough money is available at {q.american:+d}.")
+    stamps = [parse_ts(q.last_update) for q in legs if q.last_update]
+    if len(stamps) == len(legs) and max(stamps) - min(stamps) > MAX_LEG_SKEW_SECONDS:
+        checks.append(f"Legs were last updated {round((max(stamps) - min(stamps)) / 60)} minutes apart.")
+    return tuple(checks)
 
 
 def scan_game(game: dict, now: float, cfg: ScanConfig) -> list[ArbCandidate]:
@@ -75,6 +113,7 @@ def arbs_from_grouped(gm: GameMarkets, cfg: ScanConfig) -> list[ArbCandidate]:
             return_pct=ret,
             book_count=len(by_book),
             suspicious=ret > SUSPICIOUS_RETURN_PCT or len({q.book for q in legs}) == 1,
+            checks=verify_legs(legs, by_book),
         ))
     return results
 
@@ -122,6 +161,9 @@ def to_payload(
         "book_count": c.book_count,
         "suspicious": c.suspicious,
         "first_seen": first_seen,
+        "is_arb": c.is_arb,
+        "verified": c.is_arb and not c.checks and not c.suspicious,
+        "checks": list(c.checks),
         "legs": [
             {
                 "book": q.book,

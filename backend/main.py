@@ -16,9 +16,9 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 
-from api.v1 import odds, alerts, bets, arb, ev, sharp
+from api.v1 import odds, alerts, bets, arb, ev, sharp, tools
 from config import settings
-from services.odds_poller import close_client, poll_all_odds, warm_start
+from services.odds_poller import close_client, poll_all_odds, snapshot_age_seconds, warm_start
 from services.odds_store import store
 from services.redis_client import get_redis, close_redis
 from ui import routes as ui
@@ -45,10 +45,14 @@ async def lifespan(app: FastAPI):
 
     polling = bool(settings.odds_api_key) and settings.poll_interval_seconds < POLLING_DISABLED
     if polling:
-        try:
-            await poll_all_odds()
-        except Exception as exc:
-            logger.warning(f"Initial poll failed (will retry on schedule): {exc}")
+        age = snapshot_age_seconds()
+        if age is not None and age < settings.poll_interval_seconds:
+            logger.info(f"Warm snapshot is {age / 60:.0f} min old — skipping initial poll to save credits")
+        else:
+            try:
+                await poll_all_odds()
+            except Exception as exc:
+                logger.warning(f"Initial poll failed (will retry on schedule): {exc}")
         scheduler.add_job(
             poll_all_odds,
             "interval",
@@ -97,6 +101,7 @@ app.include_router(bets.router, prefix="/api/v1")
 app.include_router(arb.router, prefix="/api/v1")
 app.include_router(sharp.router, prefix="/api/v1")
 app.include_router(ev.router, prefix="/api/v1")
+app.include_router(tools.router, prefix="/api/v1")
 app.include_router(ui.router)
 
 

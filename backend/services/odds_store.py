@@ -22,7 +22,8 @@ from typing import Any, Callable
 from config import settings
 from services.arb_engine import ArbCandidate, arbs_from_grouped
 from services.ev_engine import EvBet, ev_from_grouped
-from services.markets import ScanConfig, group_game
+from services.markets import GameMarkets, ScanConfig, group_game
+from services.sharp_metrics import MoveTracker
 
 logger = logging.getLogger(__name__)
 
@@ -44,6 +45,9 @@ class OddsStore:
         self.version = 0
         self.arbs: list[ArbCandidate] = []
         self.ev_bets: list[EvBet] = []
+        # Grouped markets for the last snapshot — shared by sharp metrics and line shopping.
+        self.grouped: list[GameMarkets] = []
+        self.moves = MoveTracker()
         self.scan_ms = 0.0
         self.stats = PollStats()
         # arb id → ISO time first observed; lets the UI show how long an arb has lived
@@ -66,11 +70,13 @@ class OddsStore:
         now = time.time()
         arbs: list[ArbCandidate] = []
         ev_bets: list[EvBet] = []
+        grouped: list[GameMarkets] = []
         # Group once per game; both engines read the same grouping.
         for game in games:
             gm = group_game(game, now, cfg)
             if gm is None:
                 continue
+            grouped.append(gm)
             arbs.extend(arbs_from_grouped(gm, cfg))
             ev_bets.extend(ev_from_grouped(gm, cfg, settings.ev_floor_pct))
         arbs.sort(key=lambda a: a.return_pct, reverse=True)
@@ -86,10 +92,12 @@ class OddsStore:
         self.games = games
         self.arbs = arbs
         self.ev_bets = ev_bets
+        self.grouped = grouped
+        self.moves.observe(grouped, now_iso)
         self.polled_at = polled_at or now_iso
         self.version += 1
 
-        profitable = sum(1 for a in arbs if a.return_pct > 0)
+        profitable = sum(1 for a in arbs if a.is_arb)
         logger.info(
             f"Store v{self.version}: {len(games)} games, {profitable} arbs "
             f"({len(arbs) - profitable} near-misses), {len(ev_bets)} +EV, scan {self.scan_ms:.1f}ms"
@@ -122,8 +130,9 @@ class OddsStore:
             "version": self.version,
             "polled_at": self.polled_at,
             "games": len(self.games),
-            "arbs": sum(1 for a in self.arbs if a.return_pct > 0),
-            "near_misses": sum(1 for a in self.arbs if a.return_pct <= 0),
+            "arbs": sum(1 for a in self.arbs if a.is_arb),
+            "verified_arbs": sum(1 for a in self.arbs if a.is_arb and not a.checks and not a.suspicious),
+            "near_misses": sum(1 for a in self.arbs if not a.is_arb),
             "ev_bets": len(self.ev_bets),
             "scan_ms": round(self.scan_ms, 2),
             "fetch_ms": round(self.stats.fetch_ms, 1),

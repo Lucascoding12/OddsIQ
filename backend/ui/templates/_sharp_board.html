@@ -1,0 +1,79 @@
+{% include "_status.html" %}
+
+<section class="section">
+  <h2>Sharp vs. public</h2>
+  <p>Where the sharp fair line rates a side higher than the average soft book does. Soft books shade toward public money, so the gap points at the side sharps like.</p>
+  {% if sharp_public %}
+  <div class="table-wrap"><table>
+    <tr><th>Sharp side</th><th>Game</th><th class="num">Sharp</th><th class="num">Public</th><th class="num">Gap</th><th>Sharp books</th></tr>
+    {% for r in sharp_public %}
+    <tr>
+      <td><strong>{{ r.pick }}</strong><div class="small">{{ r.sport_title }} {{ r.market }}</div></td>
+      <td>{{ r.game }}<div class="small"><time data-local="{{ r.commence_time }}"></time></div></td>
+      <td class="num">{{ "%.1f"|format(r.sharp_prob * 100) }}%</td>
+      <td class="num">{{ "%.1f"|format(r.public_prob * 100) }}%</td>
+      <td class="num good">+{{ "%.1f"|format(r.gap_pts) }} pts</td>
+      <td class="small">{{ r.sharp_books | join(", ") }} vs {{ r.soft_books }} soft books</td>
+    </tr>
+    {% endfor %}
+  </table></div>
+  {% else %}<p class="empty">No markets with both sharp and soft prices yet.</p>{% endif %}
+</section>
+
+<section class="section">
+  <h2>Line moves and steam</h2>
+  <p>
+    Sharp-book moves since tracking started
+    {%- if tracking_since %} (<time data-age="{{ tracking_since }}"></time> ago){% endif %}.
+    Steam means two or more sharp books moved the same way. Soft books still at the old price are where the value is.
+  </p>
+  {% if moves %}
+  <div class="table-wrap"><table>
+    <tr><th>Outcome</th><th>Game</th><th>Sharp moves</th><th class="num">Move</th><th>Soft books not moved yet</th></tr>
+    {% for m in moves %}
+    <tr>
+      <td><strong>{{ m.pick }}</strong> {% if m.steam %}<span class="tag">Steam</span>{% endif %}
+        <div class="small">Moved {{ m.direction }} this side</div></td>
+      <td>{{ m.game }}<div class="small">{{ m.sport_title }} {{ m.market }}</div></td>
+      <td class="small">{% for s in m.sharp_moves %}{{ s.book_title }} {{ "%+d"|format(s["from"]) }} → {{ "%+d"|format(s.to) }}{{ ", " if not loop.last }}{% endfor %}</td>
+      <td class="num">{{ "%.1f"|format(m.move_pts) }} pts</td>
+      <td class="small">{% if m.direction == "toward" %}{% for l in m.lagging[:4] %}{{ l.book_title }} {{ "%+d"|format(l.odds) }}{{ ", " if not loop.last }}{% else %}All followed{% endfor %}{% else %}Value is on the other side{% endif %}</td>
+    </tr>
+    {% endfor %}
+  </table></div>
+  {% else %}<p class="empty">No sharp moves yet. Moves appear after the next odds refresh changes a sharp price.</p>{% endif %}
+</section>
+
+<section class="section">
+  <h2>Book disagreement</h2>
+  <p>The biggest gaps between the best and worst price on the same outcome. Large gaps mean some books have moved and others haven't caught up.</p>
+  {% if disagreement %}
+  <div class="table-wrap"><table>
+    <tr><th>Outcome</th><th>Game</th><th>Best</th><th>Worst</th><th class="num">Gap</th></tr>
+    {% for d in disagreement %}
+    <tr>
+      <td><strong>{{ d.pick }}</strong> {% if d.gap_pts > 8 %}<span class="tag tag--risk">Big gap</span>{% endif %}<div class="small">{{ d.sport_title }} {{ d.market }}</div></td>
+      <td>{{ d.game }}</td>
+      <td class="good">{{ d.best.book_title }} {{ "%+d"|format(d.best.odds) }}</td>
+      <td class="bad">{{ d.worst.book_title }} {{ "%+d"|format(d.worst.odds) }}</td>
+      <td class="num">{{ "%.1f"|format(d.gap_pts) }} pts</td>
+    </tr>
+    {% endfor %}
+  </table></div>
+  {% else %}<p class="empty">Books broadly agree right now.</p>{% endif %}
+</section>
+
+<section class="section">
+  <h2>Market hold by book</h2>
+  <p>Average margin each book builds into its prices across every live market. Lower hold means sharper, cheaper prices to bet into.</p>
+  <div class="table-wrap"><table>
+    <tr><th>Book</th><th class="num">Average hold</th><th class="num">Markets</th></tr>
+    {% for b in holds %}
+    <tr>
+      <td>{{ b.book_title }} {% if b.sharp %}<span class="tag">Sharp</span>{% endif %}</td>
+      <td class="num {{ 'good' if b.avg_hold_pct < 3 else '' }}">{{ "%.2f"|format(b.avg_hold_pct) }}%</td>
+      <td class="num">{{ b.markets }}</td>
+    </tr>
+    {% endfor %}
+  </table></div>
+</section>

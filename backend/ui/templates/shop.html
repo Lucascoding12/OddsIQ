@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}OddsIQ line shop{% endblock %}
+{% block style %}
+.field--search input { width: min(480px, 80vw); }
+.shop-game { margin: 0 0 32px; }
+.shop-game > h2 { margin: 0; font-size: 22px; font-weight: 700; }
+.shop-game > p { margin: 0 0 12px; color: var(--muted); font-size: 15px; }
+.shop-side { margin: 0 0 18px; }
+.shop-side h3 { margin: 0 0 6px; font-size: 18px; font-weight: 600; }
+.shop-side h3 .best { color: var(--green); }
+tr.top td { background: var(--green-wash); }
+{% endblock %}
+{% block controls %}
+    <label class="field field--search">Search a bet
+      <input type="search" name="q" list="teams" placeholder="chiefs -3.5, over 47.5, yankees ml" autofocus>
+    </label>
+    <datalist id="teams">{% for t in teams %}<option value="{{ t }}">{% endfor %}</datalist>
+{% endblock %}
+{% block filters %}{% endblock %}
+{% block intro %}
+  <p class="intro">Type a team, then optionally a market (ml, spread, over, under) and a line. Every book is ranked best to worst for that bet.</p>
+{% endblock %}
