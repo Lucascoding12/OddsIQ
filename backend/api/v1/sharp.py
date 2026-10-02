@@ -19,11 +19,14 @@ True open-to-close CLV requires storing historical snapshots (OddsSnapshot table
 That's populated once the poller writes to Postgres (Phase 2 of the plan).
 For now, consensus and disparity are computed live from Redis.
 """
-import json
 import statistics
-from fastapi import APIRouter
+from fastapi import APIRouter, Response
+
+from services import odds_cache
 
 router = APIRouter(tags=["sharp"])
+
+CACHE_CONTROL = "public, max-age=30"
 
 
 def american_to_decimal(odds: float) -> float:
@@ -44,21 +47,7 @@ def no_vig_prob(odds_a: float, odds_b: float) -> tuple[float, float]:
     return p_a / total, p_b / total
 
 
-@router.get("/sharp/line-movement")
-async def get_line_movement(limit: int = 30):
-    """
-    Return games with the most book disagreement on h2h odds.
-    Sorted by disparity (largest spread between best and worst odds per outcome).
-    Acts as a proxy for line movement and steam detection.
-    """
-    from services.redis_client import get_redis
-
-    redis = await get_redis()
-    raw = await redis.get("odds:all")
-    if not raw:
-        return []
-
-    games: list[dict] = json.loads(raw)
+def _compute_line_movement(games: list[dict]) -> list[dict]:
     results = []
 
     for game in games:
@@ -116,23 +105,22 @@ async def get_line_movement(limit: int = 30):
 
     # Sort by largest disagreement first
     results.sort(key=lambda x: x["disparityPct"], reverse=True)
-    return results[:limit]
+    return results
 
 
-@router.get("/sharp/no-vig")
-async def get_no_vig_odds(limit: int = 30):
+@router.get("/sharp/line-movement")
+async def get_line_movement(response: Response, limit: int = 30):
     """
-    Return no-vig (fair) odds for each game by removing the bookmaker margin.
-    Useful for identifying when a book's price is above or below the true line.
+    Return games with the most book disagreement on h2h odds.
+    Sorted by disparity (largest spread between best and worst odds per outcome).
+    Acts as a proxy for line movement and steam detection.
     """
-    from services.redis_client import get_redis
+    results = await odds_cache.get_derived("odds:all", "line-movement", _compute_line_movement)
+    response.headers["Cache-Control"] = CACHE_CONTROL
+    return (results or [])[:limit]
 
-    redis = await get_redis()
-    raw = await redis.get("odds:all")
-    if not raw:
-        return []
 
-    games: list[dict] = json.loads(raw)
+def _compute_no_vig(games: list[dict]) -> list[dict]:
     results = []
 
     for game in games:
@@ -178,4 +166,15 @@ async def get_no_vig_odds(limit: int = 30):
                 "books": book_lines,
             })
 
-    return results[:limit]
+    return results
+
+
+@router.get("/sharp/no-vig")
+async def get_no_vig_odds(response: Response, limit: int = 30):
+    """
+    Return no-vig (fair) odds for each game by removing the bookmaker margin.
+    Useful for identifying when a book's price is above or below the true line.
+    """
+    results = await odds_cache.get_derived("odds:all", "no-vig", _compute_no_vig)
+    response.headers["Cache-Control"] = CACHE_CONTROL
+    return (results or [])[:limit]

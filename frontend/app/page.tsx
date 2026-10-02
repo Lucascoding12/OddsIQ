@@ -68,9 +68,15 @@ export default function LandingPage() {
           </Link>
         </div>
 
-        <p className="text-xs text-muted-foreground">
-          No credit card. No subscription. Just the tools.
-        </p>
+        <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-2 font-mono text-[11px] uppercase tracking-widest text-muted-foreground/70">
+          <span>80+ books</span>
+          <span className="text-border">·</span>
+          <span>15 calculators</span>
+          <span className="text-border">·</span>
+          <span>30s refresh</span>
+          <span className="text-border">·</span>
+          <span>$0 forever</span>
+        </div>
 
         {/* Scroll hint */}
         <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex flex-col items-center gap-1.5 text-muted-foreground/40">
@@ -95,11 +101,11 @@ export default function LandingPage() {
               <Link
                 key={f.href}
                 href="/auth/register"
-                className="group rounded-lg border border-border bg-card p-5 space-y-2 hover:border-primary/40 hover:bg-primary/5 transition-colors"
+                className="group rounded-lg border border-border bg-card p-5 space-y-2 transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/40 hover:bg-primary/5 hover:shadow-lg hover:shadow-primary/10"
               >
                 <div className="flex items-center justify-between">
                   <h3 className="font-semibold text-sm">{f.title}</h3>
-                  <span className="text-muted-foreground group-hover:text-primary transition-colors text-xs">→</span>
+                  <span className="text-muted-foreground group-hover:text-primary transition-all group-hover:translate-x-0.5 text-xs">→</span>
                 </div>
                 <p className="text-xs text-muted-foreground leading-relaxed">{f.description}</p>
               </Link>

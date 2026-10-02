@@ -117,7 +117,7 @@ function ImpliedProbCalc() {
 
 // ── 2. No-Vig ────────────────────────────────────────────────────────────────
 function NoVigCalc() {
-  const [sides, setSides] = useState([{ odds: "110" }, { odds: "110" }])
+  const [sides, setSides] = useState([{ odds: "-110" }, { odds: "-110" }])
   const parsed = sides.map((s) => Number(s.odds || "0"))
   const valid = parsed.every((o) => !isNaN(o) && o !== 0)
   const probs = valid ? parsed.map(impliedProbability) : []
@@ -353,10 +353,6 @@ function OddsConverterCalc() {
             <span className="text-muted-foreground">Decimal → American</span>
             <span className="font-mono">{formatOdds(decimalToAmerican(dec))}</span>
           </div>
-          <div className="flex justify-between text-sm">
-            <span className="text-muted-foreground">Fair odds (no-vig 2-way)</span>
-            <span className="font-mono">{prob ? formatOdds(fairOdds(prob / (2 * prob))) : "—"}</span>
-          </div>
         </div>
       )}
     </Card>
@@ -374,7 +370,6 @@ function ParlayCalc() {
   const valid = parsed.every((d) => d !== null)
   const totalDec = valid ? parlayDecimalOdds(parsed as number[]) : null
   const payout = valid ? parlayPayout(Number(stake), parsed as number[]) : null
-  const impliedProb = totalDec ? 1 / totalDec : null
   const americanOdds = totalDec ? decimalToAmerican(totalDec) : null
 
   return (
@@ -682,7 +677,7 @@ export default function CalculatorPage() {
                 ? "bg-foreground text-background border-foreground"
                 : "text-muted-foreground border-border hover:text-foreground hover:border-foreground/40"
             }`}>
-            {c} Calculator
+            {c}
           </button>
         ))}
       </div>

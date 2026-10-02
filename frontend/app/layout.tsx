@@ -5,12 +5,13 @@ import { Navbar } from "@/components/nav/Navbar"
 import { BetsProvider } from "@/context/BetsContext"
 import { AuthProvider } from "@/context/AuthContext"
 
-const dmSans = DM_Sans({ subsets: ["latin"], variable: "--font-sans" })
-const ibmPlexMono = IBM_Plex_Mono({ subsets: ["latin"], weight: ["400", "500", "600"], variable: "--font-mono" })
+const dmSans = DM_Sans({ subsets: ["latin"], variable: "--font-dm-sans" })
+const ibmPlexMono = IBM_Plex_Mono({ subsets: ["latin"], weight: ["400", "500", "600"], variable: "--font-plex-mono" })
 
 export const metadata: Metadata = {
-  title: "OddsIQ",
-  description: "Sports odds aggregation and sharp analytics",
+  title: { default: "OddsIQ — Sharp Betting Tools", template: "%s · OddsIQ" },
+  description:
+    "Line shopping, EV and arbitrage calculators, CLV tracking, and live odds across 80+ sportsbooks — free.",
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

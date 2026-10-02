@@ -1,41 +1,75 @@
 "use client"
 
-import { createContext, useContext, useState, useEffect, ReactNode } from "react"
+import { createContext, useContext, useSyncExternalStore, ReactNode } from "react"
+
+type User = { email: string } | null
 
 type AuthContextValue = {
   isLoggedIn: boolean
-  user: { email: string } | null
+  /** False during SSR/hydration, true once the client store is readable. */
+  ready: boolean
+  user: User
   login: (email: string) => void
   logout: () => void
+}
+
+const STORAGE_KEY = "oddsiq_user"
+
+// localStorage as an external store: snapshot is cached by raw string so
+// repeated reads return a stable reference, and login/logout notify
+// subscribers (plus the `storage` event for cross-tab sync).
+const listeners = new Set<() => void>()
+let cachedRaw: string | null = null
+let cachedUser: User = null
+
+function getSnapshot(): User {
+  const raw = localStorage.getItem(STORAGE_KEY)
+  if (raw !== cachedRaw) {
+    cachedRaw = raw
+    try {
+      cachedUser = raw ? (JSON.parse(raw) as User) : null
+    } catch {
+      cachedUser = null
+    }
+  }
+  return cachedUser
+}
+
+function subscribe(callback: () => void): () => void {
+  listeners.add(callback)
+  window.addEventListener("storage", callback)
+  return () => {
+    listeners.delete(callback)
+    window.removeEventListener("storage", callback)
+  }
+}
+
+function notify() {
+  for (const listener of listeners) listener()
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null)
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<{ email: string } | null>(null)
-  const [ready, setReady] = useState(false)
-
-  useEffect(() => {
-    const stored = localStorage.getItem("oddsiq_user")
-    if (stored) setUser(JSON.parse(stored))
-    setReady(true)
-  }, [])
+  const user = useSyncExternalStore(subscribe, getSnapshot, () => null)
+  const ready = useSyncExternalStore(
+    subscribe,
+    () => true,
+    () => false,
+  )
 
   function login(email: string) {
-    const u = { email }
-    setUser(u)
-    localStorage.setItem("oddsiq_user", JSON.stringify(u))
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ email }))
+    notify()
   }
 
   function logout() {
-    setUser(null)
-    localStorage.removeItem("oddsiq_user")
+    localStorage.removeItem(STORAGE_KEY)
+    notify()
   }
 
-  if (!ready) return null
-
   return (
-    <AuthContext.Provider value={{ isLoggedIn: !!user, user, login, logout }}>
+    <AuthContext.Provider value={{ isLoggedIn: !!user, ready, user, login, logout }}>
       {children}
     </AuthContext.Provider>
   )

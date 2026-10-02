@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { Suspense, useState } from "react"
 import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useAuth } from "@/context/AuthContext"
 
-export default function LoginPage() {
+function LoginForm() {
   const [form, setForm] = useState({ email: "", password: "" })
   const { login } = useAuth()
   const router = useRouter()
@@ -42,5 +42,14 @@ export default function LoginPage() {
         No account? <Link href="/auth/register" className="text-primary hover:underline">Sign up</Link>
       </p>
     </div>
+  )
+}
+
+export default function LoginPage() {
+  // useSearchParams requires a Suspense boundary during prerendering
+  return (
+    <Suspense fallback={null}>
+      <LoginForm />
+    </Suspense>
   )
 }

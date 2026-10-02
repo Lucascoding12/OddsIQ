@@ -65,7 +65,7 @@ export function BetForm({ onSubmit }: Props) {
   return (
     <form onSubmit={handleSubmit} className="rounded-lg border p-4 space-y-4">
       <h2 className="font-semibold">Log a <span className="text-primary">Bet</span></h2>
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <div className="space-y-1.5">
           <Label>Date</Label>
           <Input type="date" value={form.date} onChange={(e) => set("date", e.target.value)} required />
@@ -94,27 +94,39 @@ export function BetForm({ onSubmit }: Props) {
         </div>
       </div>
 
-      <div className="flex items-center gap-6">
+      <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
         <div className="flex gap-3">
-          {(["pending", "win", "loss"] as const).map((r) => (
-            <button
-              key={r}
-              type="button"
-              onClick={() => setForm((p) => ({ ...p, result: r }))}
-              className={`px-4 py-1.5 rounded-full text-sm font-medium border transition-colors capitalize ${
-                form.result === r
-                  ? "border-foreground text-foreground"
-                  : "border-border text-muted-foreground hover:text-foreground hover:border-foreground/50"
-              }`}
-            >
-              {r}
-            </button>
-          ))}
+          {(["pending", "win", "loss"] as const).map((r) => {
+            const activeClass =
+              r === "win"
+                ? "border-emerald-400/60 bg-emerald-400/10 text-emerald-300"
+                : r === "loss"
+                ? "border-red-400/60 bg-red-400/10 text-red-400"
+                : "border-foreground text-foreground"
+            return (
+              <button
+                key={r}
+                type="button"
+                onClick={() => setForm((p) => ({ ...p, result: r }))}
+                className={`px-4 py-1.5 rounded-full text-sm font-medium border transition-colors capitalize ${
+                  form.result === r
+                    ? activeClass
+                    : "border-border text-muted-foreground hover:text-foreground hover:border-foreground/50"
+                }`}
+              >
+                {r}
+              </button>
+            )
+          })}
         </div>
 
         {previewPnl !== null && (
-          <span className="text-sm font-medium font-mono text-muted-foreground">
-            {previewPnl >= 0 ? "+" : ""}${previewPnl.toFixed(2)} PnL
+          <span
+            className={`text-sm font-medium font-mono ${
+              previewPnl > 0 ? "text-emerald-300" : previewPnl < 0 ? "text-red-400" : "text-muted-foreground"
+            }`}
+          >
+            {previewPnl >= 0 ? "+" : "-"}${Math.abs(previewPnl).toFixed(2)} PnL
           </span>
         )}
       </div>

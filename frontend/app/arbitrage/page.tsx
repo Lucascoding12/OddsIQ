@@ -1,20 +1,10 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState } from "react"
 import { ProtectedRoute } from "@/components/ProtectedRoute"
-import { getArbOpportunities, type ArbOpportunity } from "@/lib/api"
-
-function formatOdds(o: number) {
-  return o > 0 ? `+${o}` : `${o}`
-}
-
-function formatTime(iso: string) {
-  try {
-    return new Date(iso).toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })
-  } catch {
-    return iso
-  }
-}
+import { useArbOpportunities } from "@/lib/hooks"
+import { formatOdds, formatGameTime } from "@/lib/format"
+import { type ArbOpportunity } from "@/lib/api"
 
 function ArbCard({ opp }: { opp: ArbOpportunity }) {
   const [expanded, setExpanded] = useState(false)
@@ -28,7 +18,7 @@ function ArbCard({ opp }: { opp: ArbOpportunity }) {
       <div className="p-4 flex items-start justify-between gap-4">
         <div className="min-w-0 space-y-1">
           <div className="text-sm font-semibold truncate">{opp.away_team} @ {opp.home_team}</div>
-          <div className="text-[11px] text-muted-foreground">{opp.sport_key} · Moneyline · {formatTime(opp.commence_time)}</div>
+          <div className="text-[11px] text-muted-foreground">{opp.sport_key} · Moneyline · {formatGameTime(opp.commence_time)}</div>
           <div className="flex flex-wrap gap-2 pt-1">
             {opp.legs.map((leg, i) => (
               <span key={i} className="text-[11px] border border-border rounded px-2 py-0.5 font-mono text-muted-foreground">
@@ -40,9 +30,9 @@ function ArbCard({ opp }: { opp: ArbOpportunity }) {
 
         {/* Profit badge */}
         <div className="shrink-0 flex flex-col items-end gap-1.5">
-          <div className="rounded-md bg-primary/10 border border-primary/20 px-3 py-1.5 text-center">
-            <div className="text-lg font-bold font-mono text-primary">+{opp.profit_pct.toFixed(3)}%</div>
-            <div className="text-[10px] text-primary/60 uppercase tracking-wider">guaranteed</div>
+          <div className="rounded-md bg-emerald-400/10 border border-emerald-400/25 px-3 py-1.5 text-center">
+            <div className="text-lg font-bold font-mono text-emerald-300">+{opp.profit_pct.toFixed(3)}%</div>
+            <div className="text-[10px] text-emerald-300/70 uppercase tracking-wider">guaranteed</div>
           </div>
           <div className="text-[11px] text-muted-foreground font-mono">
             ${opp.total_stake.toFixed(2)} total stake
@@ -79,8 +69,8 @@ function ArbCard({ opp }: { opp: ArbOpportunity }) {
             </div>
           ))}
           <div className="flex justify-between pt-2 text-xs text-muted-foreground border-t border-border">
-            <span>{formatTime(opp.commence_time)}</span>
-            <span className="text-primary font-medium">
+            <span>{formatGameTime(opp.commence_time)}</span>
+            <span className="text-emerald-300 font-medium">
               +$100 guaranteed on ${opp.total_stake.toFixed(2)} staked
             </span>
           </div>
@@ -91,31 +81,9 @@ function ArbCard({ opp }: { opp: ArbOpportunity }) {
 }
 
 export default function ArbitragePage() {
-  const [opportunities, setOpportunities] = useState<ArbOpportunity[]>([])
-  const [loading, setLoading] = useState(true)
-  const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
-
-  const fetchOpportunities = useCallback(async () => {
-    try {
-      const data = await getArbOpportunities()
-      setOpportunities(data)
-      setLastUpdated(new Date())
-    } catch (err) {
-      console.error("Failed to fetch arb opportunities:", err)
-    } finally {
-      setLoading(false)
-    }
-  }, [])
-
-  useEffect(() => {
-    fetchOpportunities()
-  }, [fetchOpportunities])
-
-  // Auto-refresh every 30s
-  useEffect(() => {
-    const interval = setInterval(fetchOpportunities, 30_000)
-    return () => clearInterval(interval)
-  }, [fetchOpportunities])
+  const { data, isLoading } = useArbOpportunities()
+  const opportunities = data ?? []
+  const loading = isLoading && !data
 
   return (
     <ProtectedRoute>
@@ -126,10 +94,7 @@ export default function ArbitragePage() {
           <div>
             <h1 className="text-2xl font-semibold">Arbitrage <span className="text-primary">Scanner</span></h1>
             <p className="text-sm text-muted-foreground mt-1">
-              Auto-detected opportunities across all books · scans every 30s
-              {lastUpdated && (
-                <span className="ml-2">· {lastUpdated.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit", second: "2-digit" })}</span>
-              )}
+              Auto-detected opportunities across all books · rechecks every 30s
             </p>
           </div>
           <div className="flex items-center gap-2 shrink-0">
@@ -140,7 +105,7 @@ export default function ArbitragePage() {
               </div>
             ) : (
               <div className="flex items-center gap-1.5 text-xs text-muted-foreground border border-border rounded px-2.5 py-1.5">
-                <div className={`w-1.5 h-1.5 rounded-full ${opportunities.length > 0 ? "bg-green-500" : "bg-muted-foreground"}`} />
+                <div className={`w-1.5 h-1.5 rounded-full ${opportunities.length > 0 ? "live-dot bg-emerald-400" : "bg-muted-foreground"}`} />
                 {opportunities.length > 0 ? `${opportunities.length} found` : "No opportunities"}
               </div>
             )}

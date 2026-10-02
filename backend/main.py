@@ -15,6 +15,7 @@ from contextlib import asynccontextmanager
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
 
 from api.v1 import odds, alerts, bets, arb, sharp
 from config import settings
@@ -88,6 +89,10 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="OddsIQ API", version="0.1.0", lifespan=lifespan)
+
+# Odds payloads are large, repetitive JSON (every bookmaker for every game) —
+# gzip cuts the transfer to roughly a tenth of the size.
+app.add_middleware(GZipMiddleware, minimum_size=1024)
 
 app.add_middleware(
     CORSMiddleware,

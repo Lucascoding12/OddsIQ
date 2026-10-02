@@ -1,8 +1,10 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState } from "react"
 import { ProtectedRoute } from "@/components/ProtectedRoute"
-import { getOdds, type Game } from "@/lib/api"
+import { useOdds } from "@/lib/hooks"
+import { formatOdds, formatGameTime, formatClockTime } from "@/lib/format"
+import { type Game } from "@/lib/api"
 
 const SPORT_CATEGORIES = [
   { label: "American Football", sports: ["NFL", "NFL Preseason", "NCAAF", "CFL", "UFL"] },
@@ -20,47 +22,54 @@ const SPORT_CATEGORIES = [
   { label: "Politics & Specials", sports: ["US Politics", "Special Markets"] },
 ]
 
-function formatOdds(o: number | null) {
-  if (o == null) return "—"
-  return o > 0 ? `+${o}` : `${o}`
-}
-
-function formatTime(iso: string) {
-  try {
-    return new Date(iso).toLocaleString(undefined, {
-      month: "short", day: "numeric", hour: "numeric", minute: "2-digit",
-    })
-  } catch {
-    return iso
-  }
-}
+const GRID = "grid grid-cols-[minmax(0,1fr)_76px_76px] sm:grid-cols-[minmax(0,1fr)_90px_88px_88px_130px]"
 
 function GameRow({ game }: { game: Game }) {
-  const home = game.bestLine.homeMoneyline
-  const away = game.bestLine.awayMoneyline
-  const homeFav = home !== null && away !== null && home < away
+  const { homeMoneyline: home, awayMoneyline: away, book } = game.bestLine
 
   return (
-    <div className="grid grid-cols-[1fr_80px_120px_120px_120px_100px_80px] px-3 py-3 text-sm border-b border-border/40 hover:bg-muted/20 transition-colors">
-      <div>
-        <div className="font-medium truncate">{game.awayTeam} @ {game.homeTeam}</div>
-        <div className="text-[11px] text-muted-foreground mt-0.5">{formatTime(game.commenceTime)}</div>
+    <div className={`${GRID} items-center border-b border-border/40 px-4 py-3 transition-colors last:border-0 hover:bg-primary/[0.04]`}>
+      <div className="min-w-0 pr-3">
+        <div className="truncate text-sm font-medium leading-snug">{game.awayTeam}</div>
+        <div className="truncate text-sm leading-snug text-muted-foreground">@ {game.homeTeam}</div>
+        <div className="mt-1 font-mono text-[11px] text-muted-foreground/70">{formatGameTime(game.commenceTime)}</div>
       </div>
-      <div className="text-xs text-muted-foreground self-center truncate">{game.sport}</div>
-      <div className="text-right self-center font-mono space-y-0.5">
-        <div className={homeFav ? "text-muted-foreground" : "text-foreground font-semibold"}>
-          {formatOdds(away)}
+      <div className="hidden self-center sm:block">
+        <span className="rounded border border-border/60 px-1.5 py-0.5 text-[11px] text-muted-foreground">
+          {game.sport}
+        </span>
+      </div>
+      <div className="self-center text-right font-mono text-sm font-semibold text-emerald-300">
+        {formatOdds(away)}
+      </div>
+      <div className="self-center text-right font-mono text-sm font-semibold text-emerald-300">
+        {formatOdds(home)}
+      </div>
+      <div className="hidden min-w-0 self-center pl-3 text-right sm:block">
+        <span className="truncate text-xs text-muted-foreground">{book || "—"}</span>
+        <div className="text-[10px] uppercase tracking-wider text-muted-foreground/50">
+          {game.bookmakers?.length ?? 0} books
         </div>
-        <div className={homeFav ? "text-foreground font-semibold" : "text-muted-foreground"}>
-          {formatOdds(home)}
-        </div>
       </div>
-      <div className="text-right self-center text-muted-foreground text-xs">—</div>
-      <div className="text-right self-center text-muted-foreground text-xs">—</div>
-      <div className="text-right self-center text-xs text-muted-foreground truncate">
-        {game.bestLine.book}
+    </div>
+  )
+}
+
+function SkeletonRow() {
+  return (
+    <div className={`${GRID} items-center border-b border-border/40 px-4 py-3 last:border-0`}>
+      <div className="space-y-1.5 pr-3">
+        <div className="skeleton h-3.5 w-36" />
+        <div className="skeleton h-3.5 w-28" />
+        <div className="skeleton h-2.5 w-20" />
       </div>
-      <div />
+      <div className="hidden sm:block"><div className="skeleton h-4 w-12" /></div>
+      <div className="flex justify-end"><div className="skeleton h-4 w-12" /></div>
+      <div className="flex justify-end"><div className="skeleton h-4 w-12" /></div>
+      <div className="hidden flex-col items-end gap-1 pl-3 sm:flex">
+        <div className="skeleton h-3 w-16" />
+        <div className="skeleton h-2 w-10" />
+      </div>
     </div>
   )
 }
@@ -68,38 +77,16 @@ function GameRow({ game }: { game: Game }) {
 export default function OddsBoardPage() {
   const [activeCategory, setActiveCategory] = useState<string>("All")
   const [activeSport, setActiveSport] = useState<string>("All")
-  const [games, setGames] = useState<Game[]>([])
-  const [loading, setLoading] = useState(true)
-  const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
 
   const currentCategory = SPORT_CATEGORIES.find((c) => c.label === activeCategory)
 
-  const fetchGames = useCallback(async () => {
-    try {
-      const params: Record<string, string> = {}
-      if (activeSport !== "All") params.sport = activeSport
-      else if (activeCategory !== "All") params.category = activeCategory
-      const data = await getOdds(params)
-      setGames(data)
-      setLastUpdated(new Date())
-    } catch (err) {
-      console.error("Failed to fetch odds:", err)
-    } finally {
-      setLoading(false)
-    }
-  }, [activeCategory, activeSport])
+  const { data: games, isLoading, isValidating } = useOdds({
+    ...(activeSport !== "All" ? { sport: activeSport } : {}),
+    ...(activeSport === "All" && activeCategory !== "All" ? { category: activeCategory } : {}),
+  })
 
-  // Fetch on mount and when filters change
-  useEffect(() => {
-    setLoading(true)
-    fetchGames()
-  }, [fetchGames])
-
-  // Auto-refresh every 30s
-  useEffect(() => {
-    const interval = setInterval(fetchGames, 30_000)
-    return () => clearInterval(interval)
-  }, [fetchGames])
+  const list = games ?? []
+  const showSkeleton = isLoading && list.length === 0
 
   function handleCategoryClick(label: string) {
     setActiveCategory(label)
@@ -108,73 +95,72 @@ export default function OddsBoardPage() {
 
   const displaySport = activeSport !== "All" ? activeSport : activeCategory !== "All" ? activeCategory : "All Sports"
 
+  const categoryButton = (label: string) =>
+    `w-full rounded-md px-3 py-2 text-left text-sm font-medium transition-colors ${
+      activeCategory === label
+        ? "bg-primary/15 text-foreground"
+        : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
+    }`
+
   return (
     <ProtectedRoute>
-      <div className="flex gap-6 min-h-[calc(100vh-7rem)]">
+      <div className="flex min-h-[calc(100vh-7rem)] gap-6">
 
-        {/* Left sidebar */}
-        <aside className="w-52 shrink-0 space-y-1">
-          <div className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground px-2 pb-2">
+        {/* Left sidebar — desktop only */}
+        <aside className="hidden w-52 shrink-0 space-y-1 md:block">
+          <div className="px-2 pb-2 text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
             Sports
           </div>
-          <button
-            onClick={() => handleCategoryClick("All")}
-            className={`w-full text-left px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-              activeCategory === "All"
-                ? "bg-primary/15 text-foreground"
-                : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
-            }`}
-          >
+          <button onClick={() => handleCategoryClick("All")} className={categoryButton("All")}>
             All Sports
           </button>
           {SPORT_CATEGORIES.map((cat) => (
-            <button
-              key={cat.label}
-              onClick={() => handleCategoryClick(cat.label)}
-              className={`w-full text-left px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                activeCategory === cat.label
-                  ? "bg-primary/15 text-foreground"
-                  : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
-              }`}
-            >
+            <button key={cat.label} onClick={() => handleCategoryClick(cat.label)} className={categoryButton(cat.label)}>
               {cat.label}
             </button>
           ))}
         </aside>
 
         {/* Main content */}
-        <div className="flex-1 min-w-0 space-y-4">
+        <div className="min-w-0 flex-1 space-y-4">
 
           {/* Header */}
-          <div className="flex items-start justify-between">
-            <div>
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
               <h1 className="text-xl font-semibold text-primary">{displaySport}</h1>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                Best available lines across all books · refreshes every 30s
-                {lastUpdated && (
-                  <span className="ml-2">· updated {lastUpdated.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit", second: "2-digit" })}</span>
-                )}
+              <p className="mt-0.5 text-xs text-muted-foreground">
+                Best available moneyline across all books · refreshes every 30s
               </p>
             </div>
-            <div className="flex items-center gap-2">
-              {loading && (
-                <span className="text-[11px] text-muted-foreground font-mono animate-pulse">loading…</span>
-              )}
-              <span className="text-[11px] text-muted-foreground border border-border rounded px-2 py-1 font-mono">
-                {games.length > 0 ? `${games.length} GAMES` : "LIVE"}
+            <div className="flex shrink-0 items-center gap-2">
+              <span className="flex items-center gap-1.5 rounded border border-border px-2 py-1 font-mono text-[11px] text-muted-foreground">
+                <span className={`h-1.5 w-1.5 rounded-full ${isValidating ? "bg-amber-400" : "live-dot bg-emerald-400"}`} />
+                {showSkeleton ? "SYNCING" : `${list.length} GAMES`}
               </span>
             </div>
           </div>
+
+          {/* Mobile category picker */}
+          <select
+            value={activeCategory}
+            onChange={(e) => handleCategoryClick(e.target.value)}
+            className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm md:hidden"
+          >
+            <option value="All">All Sports</option>
+            {SPORT_CATEGORIES.map((cat) => (
+              <option key={cat.label} value={cat.label}>{cat.label}</option>
+            ))}
+          </select>
 
           {/* League sub-filter */}
           {currentCategory && (
             <div className="flex flex-wrap gap-1.5 border-b border-border pb-3">
               <button
                 onClick={() => setActiveSport("All")}
-                className={`px-2.5 py-1 rounded text-xs font-medium transition-colors ${
+                className={`rounded px-2.5 py-1 text-xs font-medium transition-colors ${
                   activeSport === "All"
                     ? "bg-foreground text-background"
-                    : "text-muted-foreground hover:text-foreground border border-border hover:border-foreground/40"
+                    : "border border-border text-muted-foreground hover:border-foreground/40 hover:text-foreground"
                 }`}
               >
                 All leagues
@@ -183,10 +169,10 @@ export default function OddsBoardPage() {
                 <button
                   key={sport}
                   onClick={() => setActiveSport(sport)}
-                  className={`px-2.5 py-1 rounded text-xs font-medium transition-colors ${
+                  className={`rounded px-2.5 py-1 text-xs font-medium transition-colors ${
                     activeSport === sport
                       ? "bg-foreground text-background"
-                      : "text-muted-foreground hover:text-foreground border border-border hover:border-foreground/40"
+                      : "border border-border text-muted-foreground hover:border-foreground/40 hover:text-foreground"
                   }`}
                 >
                   {sport}
@@ -195,37 +181,39 @@ export default function OddsBoardPage() {
             </div>
           )}
 
-          {/* Table header */}
-          <div className="grid grid-cols-[1fr_80px_120px_120px_120px_100px_80px] text-[11px] font-semibold uppercase tracking-wider text-muted-foreground px-3 py-2 border-b border-border">
-            <span>Game</span>
-            <span>League</span>
-            <span className="text-right">Moneyline</span>
-            <span className="text-right">Spread</span>
-            <span className="text-right">Total</span>
-            <span className="text-right">Best Book</span>
-            <span />
+          {/* Table */}
+          <div className="overflow-hidden rounded-lg border border-border">
+            <div className={`${GRID} border-b border-border bg-muted/30 px-4 py-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground`}>
+              <span>Matchup</span>
+              <span className="hidden sm:block">League</span>
+              <span className="text-right">Away ML</span>
+              <span className="text-right">Home ML</span>
+              <span className="hidden pl-3 text-right sm:block">Best Book</span>
+            </div>
+
+            {showSkeleton && Array.from({ length: 8 }, (_, i) => <SkeletonRow key={i} />)}
+
+            {!showSkeleton && list.length === 0 && (
+              <div className="flex flex-col items-center justify-center py-24 text-center">
+                <div className="text-sm font-medium text-muted-foreground">No games available</div>
+                <div className="mt-1 max-w-xs text-xs text-muted-foreground">
+                  {activeSport !== "All"
+                    ? `No ${activeSport} events are currently scheduled.`
+                    : activeCategory !== "All"
+                    ? `No ${activeCategory} events are currently scheduled.`
+                    : "No live odds in cache. Trigger a poll from the API."}
+                </div>
+              </div>
+            )}
+
+            {!showSkeleton && list.map((game) => <GameRow key={game.id} game={game} />)}
           </div>
 
-          {/* Game rows or empty state */}
-          {!loading && games.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-24 text-center border border-dashed border-border rounded-lg">
-              <div className="text-sm font-medium text-muted-foreground">No games available</div>
-              <div className="text-xs text-muted-foreground mt-1 max-w-xs">
-                {activeSport !== "All"
-                  ? `No ${activeSport} events are currently scheduled.`
-                  : activeCategory !== "All"
-                  ? `No ${activeCategory} events are currently scheduled.`
-                  : "No live odds in cache. Trigger a poll from the API."}
-              </div>
-            </div>
-          ) : (
-            <div className="rounded-lg border border-border overflow-hidden">
-              {games.map((game) => (
-                <GameRow key={game.id} game={game} />
-              ))}
-            </div>
+          {list.length > 0 && (
+            <p className="text-right font-mono text-[11px] text-muted-foreground/60">
+              prices = best available across books · checked {formatClockTime(new Date())}
+            </p>
           )}
-
         </div>
       </div>
     </ProtectedRoute>

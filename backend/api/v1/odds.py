@@ -6,9 +6,16 @@ GET /odds/sports   — the full sport category tree
 GET /odds/arb-eligible — sports eligible for 2-way arb scanning
 """
 import json
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Query, Response
+
+from services import odds_cache
 
 router = APIRouter(tags=["odds"])
+
+# Odds only change when the poller runs (every few hours in prod), so letting
+# the browser reuse a response for 30s costs nothing in freshness and makes
+# page/filter switches instant.
+CACHE_CONTROL = "public, max-age=30"
 
 # Maps display sport name → The Odds API sport_key
 SPORT_KEYS: dict[str, str] = {
@@ -194,36 +201,37 @@ async def get_odds(
     category: str | None = Query(None, description="Filter by category, e.g. 'Basketball'"),
 ):
     """Return live odds from Redis cache. Empty list if not yet polled."""
-    from services.redis_client import get_redis
-
-    redis = await get_redis()
-
     # Try sport-specific key first (cheaper), fall back to all
     if sport_key:
-        raw = await redis.get(f"odds:sport:{sport_key}")
+        key = f"odds:sport:{sport_key}"
     elif sport and sport in SPORT_KEYS:
-        raw = await redis.get(f"odds:sport:{SPORT_KEYS[sport]}")
+        key = f"odds:sport:{SPORT_KEYS[sport]}"
     else:
-        raw = await redis.get("odds:all")
+        key = "odds:all"
 
-    if not raw:
-        return []
+    def compute(games: list[dict]) -> str:
+        normalized = [_normalize_game(g) for g in games]
+        if category:
+            normalized = [g for g in normalized if g["category"] == category]
+        return json.dumps(normalized)
 
-    games: list[dict] = json.loads(raw)
-    normalized = [_normalize_game(g) for g in games]
-
-    # Apply category filter after normalization
-    if category:
-        normalized = [g for g in normalized if g["category"] == category]
-
-    return normalized
+    # Normalization + serialization are memoized per payload, so repeat
+    # requests between polls skip both the parse and the dumps entirely.
+    payload = await odds_cache.get_derived(key, f"normalized:{category or 'all'}", compute)
+    return Response(
+        content=payload or "[]",
+        media_type="application/json",
+        headers={"Cache-Control": CACHE_CONTROL},
+    )
 
 
 @router.get("/odds/sports", response_model=dict[str, list[str]])
-def get_sport_categories():
+def get_sport_categories(response: Response):
+    response.headers["Cache-Control"] = "public, max-age=3600"
     return SPORT_CATEGORIES
 
 
 @router.get("/odds/arb-eligible", response_model=list[str])
-def get_arb_eligible_sports():
+def get_arb_eligible_sports(response: Response):
+    response.headers["Cache-Control"] = "public, max-age=3600"
     return sorted(ARB_ELIGIBLE_SPORTS)

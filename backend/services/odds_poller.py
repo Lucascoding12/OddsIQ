@@ -11,6 +11,7 @@ Architecture:
 We poll a fixed set of active sports to keep credit usage low.
 Adjust ACTIVE_SPORTS to expand/shrink coverage.
 """
+import asyncio
 import json
 import logging
 from datetime import datetime, timezone
@@ -82,19 +83,22 @@ async def poll_all_odds() -> None:
     all_games: list[dict] = []
 
     async with httpx.AsyncClient() as client:
-        for sport_key in ACTIVE_SPORTS:
-            games = await fetch_odds_for_sport(client, sport_key)
-            if games:
-                # Normalize: add display fields for the frontend
-                for game in games:
-                    game["polled_at"] = datetime.now(timezone.utc).isoformat()
+        results = await asyncio.gather(
+            *(fetch_odds_for_sport(client, sport_key) for sport_key in ACTIVE_SPORTS)
+        )
 
-                await redis.setex(
-                    f"odds:sport:{sport_key}",
-                    ODDS_TTL,
-                    json.dumps(games),
-                )
-                all_games.extend(games)
+    polled_at = datetime.now(timezone.utc).isoformat()
+    for sport_key, games in zip(ACTIVE_SPORTS, results):
+        if games:
+            for game in games:
+                game["polled_at"] = polled_at
+
+            await redis.setex(
+                f"odds:sport:{sport_key}",
+                ODDS_TTL,
+                json.dumps(games),
+            )
+            all_games.extend(games)
 
     if all_games:
         await redis.setex("odds:all", ODDS_TTL, json.dumps(all_games))

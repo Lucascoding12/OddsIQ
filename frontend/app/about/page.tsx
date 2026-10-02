@@ -111,7 +111,7 @@ export default function AboutPage() {
               I am a student applying what I study — probability, statistical modeling, and programming —
               to one of the most data-rich environments that exists: sports betting markets.
               OddsIQ is the platform I wish existed when I started. Building it in the open,
-              keeping it free, and putting the math in everyone's hands.
+              keeping it free, and putting the math in everyone&apos;s hands.
             </p>
           </div>
         </div>

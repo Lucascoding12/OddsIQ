@@ -1,28 +1,12 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { getLineMovement, type LineMovementEntry } from "@/lib/api"
-
-function formatOdds(o: number) {
-  return o > 0 ? `+${o}` : `${o}`
-}
-
-function formatTime(iso: string) {
-  try {
-    return new Date(iso).toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })
-  } catch { return iso }
-}
+import { useLineMovement } from "@/lib/hooks"
+import { formatOdds, formatGameTime } from "@/lib/format"
 
 export function LineMovementPanel() {
-  const [lines, setLines] = useState<LineMovementEntry[]>([])
-  const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    getLineMovement(25)
-      .then(setLines)
-      .catch(console.error)
-      .finally(() => setLoading(false))
-  }, [])
+  const { data, isLoading } = useLineMovement(25)
+  const lines = data ?? []
+  const loading = isLoading && !data
 
   return (
     <div className="rounded-lg border p-4 space-y-3">
@@ -84,7 +68,7 @@ export function LineMovementPanel() {
               <div className="flex items-center gap-2">
                 <span>{line.bookCount} books</span>
                 <span>·</span>
-                <span>{formatTime(line.commence_time)}</span>
+                <span>{formatGameTime(line.commence_time)}</span>
               </div>
             </div>
           </div>
