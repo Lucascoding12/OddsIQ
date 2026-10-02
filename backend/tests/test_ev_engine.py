@@ -73,12 +73,12 @@ class EvEngineTest(unittest.TestCase):
 
     def test_lowvig_not_double_counted_with_betonline(self) -> None:
         gm = _grouped({"betonlineag": (-110, -110), "lowvig": (-150, 130), "fanduel": (120, -140)})
-        _, titles = fair_line(gm, next(iter(gm.groups)))
+        titles = fair_line(gm, next(iter(gm.groups))).titles
         self.assertEqual(titles, ("Betonlineag",))
 
     def test_sharps_are_blended_by_weight(self) -> None:
         gm = _grouped({"pinnacle": (-110, -110), "novig": (-150, 150)})
-        probs, _ = fair_line(gm, next(iter(gm.groups)))
+        probs = fair_line(gm, next(iter(gm.groups))).probs
         self.assertGreater(probs["Chiefs"], 0.5)
         self.assertLess(probs["Chiefs"], 0.6)  # Pinnacle (weight 1.0) pulls it toward 50%
 
@@ -86,6 +86,36 @@ class EvEngineTest(unittest.TestCase):
         gm = _grouped({"pinnacle": (-105, -105), "fanduel": (-135, 115), "draftkings": (-130, 108)})
         [bet] = ev_from_grouped(gm, ScanConfig())
         self.assertEqual([q.book for q, _ in bet.offers], ["fanduel", "draftkings"])
+
+
+class ConfidenceTest(unittest.TestCase):
+    def test_prediction_markets_are_pulled_toward_even(self) -> None:
+        from services.ev_engine import _recalibrate
+        fav, dog = _recalibrate([0.8, 0.2], 0.956)
+        self.assertLess(fav, 0.8)
+        self.assertAlmostEqual(fav + dog, 1.0)
+        self.assertEqual([round(p, 9) for p in _recalibrate([0.5, 0.5], 0.956)], [0.5, 0.5])
+
+    def test_single_source_is_thin(self) -> None:
+        gm = _grouped({"pinnacle": (-105, -105), "fanduel": (-135, 115)})
+        [bet] = ev_from_grouped(gm, ScanConfig())
+        self.assertEqual(bet.confidence, "thin")
+
+    def test_three_agreeing_sources_are_strong(self) -> None:
+        gm = _grouped({"pinnacle": (-105, -105), "kalshi": (-104, -104), "novig": (100, -102),
+                       "fanduel": (-135, 115)})
+        [bet] = ev_from_grouped(gm, ScanConfig())
+        self.assertEqual(len(bet.sharp_books), 3)
+        self.assertGreater(bet.worst_case_ev(bet.offers[0][0].decimal), 0)
+        self.assertEqual(bet.confidence, "strong")
+
+    def test_disagreeing_sources_are_thin(self) -> None:
+        # The blend makes FanDuel +125 on the Bills +EV; Pinnacle alone does not.
+        gm = _grouped({"pinnacle": (-140, 120), "novig": (110, -110), "fanduel": (-150, 125)})
+        bills = [b for b in ev_from_grouped(gm, ScanConfig()) if b.selection == "Bills"]
+        self.assertTrue(bills)
+        self.assertLessEqual(bills[0].worst_case_ev(bills[0].offers[0][0].decimal), 0)
+        self.assertEqual(bills[0].confidence, "thin")
 
 
 class EvApiTest(unittest.TestCase):
@@ -98,7 +128,7 @@ class EvApiTest(unittest.TestCase):
         store.update([_game({"pinnacle": (-105, -105), "fanduel": (-135, 115), "draftkings": (-130, 108)})])
 
     def test_ev_endpoint_with_kelly_stake(self) -> None:
-        [bet] = self.client.get("/api/v1/ev?bankroll=1000&kelly=0.25&round_to=0").json()
+        [bet] = self.client.get("/api/v1/ev?bankroll=1000&kelly=0.25&round_to=0&min_confidence=thin").json()
         self.assertEqual(bet["book"], "fanduel")
         self.assertEqual(bet["pick"], "Bills")
         # full Kelly = 0.075 / 1.15 → quarter of that on $1000
@@ -106,12 +136,12 @@ class EvApiTest(unittest.TestCase):
         self.assertEqual(bet["also"][0]["book"], "draftkings")
 
     def test_book_filter_falls_back_to_next_best_book(self) -> None:
-        [bet] = self.client.get("/api/v1/ev?books=draftkings").json()
+        [bet] = self.client.get("/api/v1/ev?books=draftkings&min_confidence=thin").json()
         self.assertEqual(bet["book"], "draftkings")
         self.assertEqual(bet["also"], [])
 
     def test_min_edge_filters(self) -> None:
-        self.assertEqual(self.client.get("/api/v1/ev?min_ev_pct=10").json(), [])
+        self.assertEqual(self.client.get("/api/v1/ev?min_ev_pct=10&min_confidence=thin").json(), [])
 
     def test_ev_page_renders(self) -> None:
         self.assertIn("Kelly fraction", self.client.get("/ev").text)

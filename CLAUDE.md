@@ -136,6 +136,7 @@ The Odds API  (/sports discovery is free; /odds costs markets × regions per spo
      /ev               +EV page: soft-book prices vs the sharp fair line
      /shop             Line shopping: search a bet, every book ranked
      /sharp            Sharp vs public, line moves/steam, disagreement, book holds
+     /kelly            Kelly explainer, live calculator, growth curve, Kelly sheet
      /calc             15 calculators (services/calculators.py)
      /ui/stream, /ui/ev/stream   SSE: rendered board HTML on every update
      /api/v1/arb/*     JSON + SSE + manual calculator
@@ -162,10 +163,16 @@ still works against the same JSON API.
 - Returns under 0.01% are break-even, not arbs.
 
 ### +EV engine rules
-- Sharp books (weights): Pinnacle 1.0, BetOnline/LowVig 0.6 (one family,
-  counted once), Novig 0.5, ProphetX 0.4, Betfair exchange 0.6. Chosen from
-  Pikkit's sharpness rankings; Circa and BookMaker aren't in The Odds API.
-- Each sharp book is de-vigged with the power method, then blended by weight.
+- Sharp sources (weights): Pinnacle 1.0, Kalshi 0.9, Polymarket 0.7,
+  BetOnline 0.6, Novig 0.5, ProphetX 0.4, Betfair exchange 0.6.
+  Research basis: a 5,333-game study (Northwestern, 2025–26) found Kalshi,
+  Polymarket and sportsbook consensus equally accurate at the close (Brier
+  within ±0.001, also vs Pinnacle), so the fair line blends sources.
+- Each source is de-vigged (power method) from posted prices; Kalshi and
+  Polymarket log-odds are scaled by their calibration slopes (~0.955).
+- Confidence: strong = 3+ sources and +EV against the least favorable one;
+  fair = 2+; thin = otherwise. The UI defaults to fair and up.
+- Kalshi fee (0.07 × P × (1 − P) per contract) is applied when it's a bet leg.
 - EV = fair_prob × decimal − 1 for every non-sharp book; stakes use
   fractional Kelly. Edges > 10% are flagged as likely stale lines.
 

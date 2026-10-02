@@ -16,6 +16,8 @@ from services.odds_store import store
 
 router = APIRouter(tags=["ev"])
 
+CONFIDENCE_RANK = {"thin": 0, "fair": 1, "strong": 2}
+
 
 @dataclass(frozen=True)
 class EvQuery:
@@ -30,6 +32,7 @@ class EvQuery:
     sort: str
     hide_suspicious: bool
     min_sharps: int
+    min_confidence: str = "thin"
 
 
 def ev_query(
@@ -44,9 +47,11 @@ def ev_query(
     sort: str = Query("edge", pattern="^(edge|likely)$", description="edge = biggest EV, likely = highest win probability"),
     hide_suspicious: bool = Query(False),
     min_sharps: int = Query(1, ge=1, le=5, description="Require the fair line from at least this many sharp books"),
+    min_confidence: str = Query("fair", pattern="^(thin|fair|strong)$",
+                                description="strong = 3+ sharp sources all agree it's +EV; fair = 2+; thin = anything"),
 ) -> EvQuery:
     book_set = frozenset(b.strip() for b in books.split(",") if b.strip()) if books else None
-    return EvQuery(sport_key, market, min_ev_pct, min_prob, book_set or None, bankroll, kelly, round_to, sort, hide_suspicious, min_sharps)
+    return EvQuery(sport_key, market, min_ev_pct, min_prob, book_set or None, bankroll, kelly, round_to, sort, hide_suspicious, min_sharps, min_confidence)
 
 
 def select_ev(q: EvQuery) -> list[dict]:
@@ -54,6 +59,8 @@ def select_ev(q: EvQuery) -> list[dict]:
         out = []
         for bet in store.ev_bets:
             if bet.fair_prob < q.min_prob or len(bet.sharp_books) < q.min_sharps:
+                continue
+            if CONFIDENCE_RANK[bet.confidence] < CONFIDENCE_RANK[q.min_confidence]:
                 continue
             if q.sport_key and bet.sport_key != q.sport_key:
                 continue

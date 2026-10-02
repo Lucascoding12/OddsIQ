@@ -1,0 +1,99 @@
+{% if error %}<p class="warn">{{ error }}</p>{% endif %}
+{% if bet_missing %}<p class="warn">That live bet has moved off the board. Pick another, or enter your own numbers.</p>{% endif %}
+
+<section class="section">
+  <h2>Your bet</h2>
+  {% if picked %}
+  <p>
+    {{ picked.label }}, {{ picked.game }}.
+    {% if conservative %}Win chance {{ "%.1f"|format(p * 100) }}% from the least favorable sharp source.
+    {% else %}Win chance {{ "%.1f"|format(p * 100) }}% from the blended sharp fair line.{% endif %}
+  </p>
+  {% endif %}
+  {% if full > 0 %}
+  <p>
+    With p = {{ "%.3f"|format(p) }} and d = {{ "%.3f"|format(decimal) }}:
+    ({{ "%.3f"|format(p) }} × {{ "%.3f"|format(decimal) }} − 1) ÷ ({{ "%.3f"|format(decimal) }} − 1)
+    = <strong class="good">{{ "%.2f"|format(full * 100) }}% of your bankroll</strong> at full Kelly.
+    Your edge is {{ "%+.2f"|format(edge * 100) }}% per dollar.
+  </p>
+  {% else %}
+  <p class="warn">
+    No edge: at {{ "%+d"|format(american) }} you need better than {{ "%.1f"|format(100 / decimal) }}% to win,
+    and you've got {{ "%.1f"|format(p * 100) }}%. Kelly says don't bet.
+  </p>
+  {% endif %}
+
+  {% if full > 0 %}
+  <div class="table-wrap"><table>
+    <tr><th>Size</th><th class="num">Bankroll</th><th class="num">Stake</th><th class="num">Growth per bet</th><th class="num">Bets to double</th><th class="num">Chance of ever losing half</th></tr>
+    {% for r in rows %}
+    <tr class="{{ 'chosen' if r.multiple == chosen else '' }}">
+      <td>{{ r.name }} Kelly</td>
+      <td class="num">{{ "%.2f"|format(r.fraction * 100) }}%</td>
+      <td class="num">${{ "{:,.2f}".format(r.stake) }}</td>
+      <td class="num">{{ "%+.3f"|format(r.growth_pct) }}%</td>
+      <td class="num">{% if r.bets_to_double %}{{ "{:,.0f}".format(r.bets_to_double) }}{% else %}—{% endif %}</td>
+      <td class="num">{{ "%.1f"|format(r.halving_chance * 100) }}%</td>
+    </tr>
+    {% endfor %}
+  </table></div>
+  <p class="small">Chance of ever losing half uses Thorp's continuous-betting model; it shows how fast risk falls as you bet a fraction of Kelly.</p>
+  {% endif %}
+</section>
+
+{% if curve %}
+<section class="section">
+  <h2>Growth rate by bet size</h2>
+  <p>Expected long-run growth per bet for every stake size on this bet. The peak is full Kelly. Past about twice Kelly, a real edge still shrinks your bankroll.</p>
+  <div class="chart">
+    <svg viewBox="0 0 {{ curve.width }} {{ curve.height }}" role="img"
+         aria-label="Growth rate rises to a peak at full Kelly ({{ '%.1f'|format(full * 100) }}% of bankroll), then falls below zero"
+         data-points='{{ curve.points | tojson }}'>
+      <line class="axis" x1="{{ curve.left }}" x2="{{ curve.right }}" y1="{{ curve.bottom }}" y2="{{ curve.bottom }}"/>
+      <line class="zero" x1="{{ curve.left }}" x2="{{ curve.right }}" y1="{{ curve.zero_y }}" y2="{{ curve.zero_y }}"/>
+      {% for t in curve.y_ticks %}<text x="{{ curve.left - 8 }}" y="{{ t.y + 4 }}" text-anchor="end">{{ t.label }}</text>{% endfor %}
+      {% for t in curve.x_ticks %}<text x="{{ t.x }}" y="{{ curve.bottom + 18 }}" text-anchor="middle">{{ t.label }}</text>{% endfor %}
+      <text x="{{ (curve.left + curve.right) / 2 }}" y="{{ curve.height - 2 }}" text-anchor="middle">Share of bankroll bet</text>
+      <path class="line" d="{{ curve.path }}"/>
+      {% for m in curve.markers %}
+      <circle class="marker {{ 'marker--chosen' if (m.name == 'Full' and chosen == 1) or (m.name == 'Half' and chosen == 0.5) or (m.name == 'Quarter' and chosen == 0.25) else '' }}" cx="{{ m.x }}" cy="{{ m.y }}" r="5"/>
+      <text class="mlabel" x="{{ m.x }}" y="{{ m.y - 12 }}" text-anchor="middle">{{ m.name }}</text>
+      {% endfor %}
+      <line class="cross" x1="0" x2="0" y1="16" y2="{{ curve.bottom }}"/>
+      <circle class="dot" r="4" cx="0" cy="0"/>
+    </svg>
+    <div class="tip" aria-hidden="true"></div>
+  </div>
+</section>
+{% endif %}
+
+<section class="section">
+  <h2>Kelly sheet for today's +EV bets</h2>
+  <p>
+    Every live bet rated fair or strong, sized at your Kelly fraction
+    {%- if conservative %} using the least favorable sharp price{% endif %}.
+    {% if scale < 1 %}
+      Together they'd put more than {{ "%.0f"|format(max_exposure_pct) }}% of your bankroll at risk, so every stake is scaled to {{ "%.0f"|format(scale * 100) }}% of its Kelly size.
+    {% endif %}
+  </p>
+  {% if sheet %}
+  <div class="table-wrap"><table>
+    <tr><th>Bet</th><th class="num">Win chance</th><th class="num">Edge</th><th class="num">Bankroll</th><th class="num">Stake</th></tr>
+    {% for r in sheet %}
+    <tr>
+      <td>{{ r.label }} <span class="tag {{ 'tag--risk' if r.confidence == 'thin' else '' }}">{{ r.confidence | title }}</span></td>
+      <td class="num">{{ "%.1f"|format(r.fair_prob * 100) }}%</td>
+      <td class="num good">{{ "%+.1f"|format(r.ev_pct) }}%</td>
+      <td class="num">{{ "%.2f"|format(r.kelly_fraction * 100) }}%</td>
+      <td class="num"><button class="stake" type="button" data-copy="{{ "%.2f"|format(r.stake) }}">${{ "{:,.2f}".format(r.stake) }}</button></td>
+    </tr>
+    {% endfor %}
+  </table></div>
+  <p class="small">Total open: ${{ "{:,.2f}".format(sheet_total) }} of ${{ "{:,.2f}".format(bankroll) }}.</p>
+  {% else %}
+  <p class="empty">No fair or strong +EV bets right now{% if conservative %} that stay +EV at the least favorable sharp price{% endif %}.</p>
+  {% endif %}
+</section>
+
+{% include "_status.html" %}

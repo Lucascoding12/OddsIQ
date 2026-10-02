@@ -181,6 +181,12 @@ class ScanGameTest(unittest.TestCase):
         self.assertEqual(len(scan_game(game, NOW, ScanConfig(commissions={}))), 1)
         self.assertEqual(scan_game(game, NOW, OPEN), [])
 
+    def test_kalshi_fee_depends_on_price(self) -> None:
+        from services.markets import commission_for, EXCHANGE_COMMISSION
+        self.assertAlmostEqual(commission_for("kalshi", 2.0, EXCHANGE_COMMISSION), 0.035)
+        self.assertAlmostEqual(commission_for("kalshi", 1.25, EXCHANGE_COMMISSION), 0.056)
+        self.assertEqual(commission_for("draftkings", 2.0, EXCHANGE_COMMISSION), 0.0)
+
     def test_single_book_arb_flagged_suspicious(self) -> None:
         game = _game([_book("dk", [_h2h({"Yankees": 110, "Red Sox": 110})])])
         [arb] = scan_game(game, NOW, OPEN)

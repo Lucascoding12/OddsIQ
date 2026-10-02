@@ -18,15 +18,22 @@
         <option value="likely">Most likely to win</option>
       </select>
     </label>
-    <label class="check"><input type="checkbox" name="min_sharps" value="2"> Confirmed by 2+ sharp books</label>
+    <label class="field">Confidence
+      <select name="min_confidence">
+        <option value="strong">Strong only</option>
+        <option value="fair" selected>Fair and up</option>
+        <option value="thin">Show all</option>
+      </select>
+    </label>
 {% endblock %}
 {% block style %}
 .legs--single .leg { flex: 0 1 360px; }
 {% endblock %}
 {% block intro %}
   <p class="intro">
-    Each bet pays more than the sharp books think it's worth. We take the vig out of
-    {{ sharp_names }} to get the fair price, then compare every other book against it.
+    Each bet pays more than the sharp market thinks it's worth. We take the vig out of
+    {{ sharp_names }}, blend them into one fair price, and compare every other book against it.
+    Strong means three or more sharp sources each say the bet is +EV on their own.
     Single bets can lose; the edge pays off across many of them.
   </p>
 {% endblock %}

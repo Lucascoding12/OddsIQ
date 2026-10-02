@@ -17,7 +17,9 @@ from fastapi.templating import Jinja2Templates
 from api.v1.arb import SSE_KEEPALIVE_SECONDS, ArbQuery, arb_query, select_arbs
 from api.v1.ev import EvQuery, ev_query, select_ev
 from api.v1.tools import sharp_summary
-from services import calculators, line_shop
+from services import calculators, kelly, line_shop
+from services.markets import label
+from services.odds_math import american_to_decimal, kelly_fraction
 from services.ev_engine import SHARP_WEIGHTS
 from services.odds_store import store
 
@@ -25,7 +27,7 @@ router = APIRouter(include_in_schema=False)
 templates = Jinja2Templates(directory=Path(__file__).parent / "templates")
 
 MARKET_NAMES = {"h2h": "Moneyline", "spreads": "Spread", "totals": "Total"}
-SHARP_NAMES = "Pinnacle, BetOnline, Novig and ProphetX"
+SHARP_NAMES = "Pinnacle, Kalshi, Polymarket, BetOnline, Novig and ProphetX"
 
 
 def available_books(exclude_sharp: bool = False) -> list[tuple[str, str]]:
@@ -175,3 +177,113 @@ async def calc_result(request: Request, slug: str) -> HTMLResponse:
         raise HTTPException(404)
     result, error = calculators.run(calc, dict(request.query_params))
     return HTMLResponse(templates.get_template("_calc_result.html").render(result=result, error=error))
+
+
+def _live_bet_options() -> list[dict]:
+    """Current +EV bets with fair or strong confidence, for the Kelly page's picker."""
+    def compute() -> list[dict]:
+        out = []
+        for b in store.ev_bets:
+            if b.confidence == "thin":
+                continue
+            q, ev = b.offers[0]
+            out.append({
+                "id": b.id,
+                "label": f"{label(b.market, b.selection, b.point)} {q.american:+d} at {q.book_title}",
+                "game": f"{b.away_team} at {b.home_team}",
+                "book_title": q.book_title, "odds": q.american, "decimal": q.decimal,
+                "fair_prob": b.fair_prob, "fair_prob_low": b.fair_prob_low,
+                "ev_pct": ev * 100, "confidence": b.confidence,
+            })
+        return out
+
+    return store.memo("kelly-bets", compute)
+
+
+def _curve_view(p: float, decimal: float, full: float, width: int = 640, height: int = 240) -> dict | None:
+    points = kelly.growth_curve(p, decimal)
+    if not points:
+        return None
+    pad_l, pad_r, pad_t, pad_b = 52, 16, 16, 34
+    xs = [f for f, _ in points]
+    ys = [g for _, g in points]
+    y_lo, y_hi = min(min(ys), 0.0), max(ys) * 1.15 or 1.0
+    x_hi = xs[-1]
+
+    def sx(f: float) -> float:
+        return pad_l + (width - pad_l - pad_r) * f / x_hi
+
+    def sy(g: float) -> float:
+        return pad_t + (height - pad_t - pad_b) * (y_hi - g) / (y_hi - y_lo)
+
+    markers = []
+    for name, multiple in kelly.FRACTIONS[:3]:
+        f = full * multiple
+        g = kelly.growth_rate(f, p, decimal) * 100
+        markers.append({"name": name, "x": sx(f), "y": sy(g)})
+    x_ticks = [{"x": sx(x_hi * i / 4), "label": f"{x_hi * i / 4 * 100:.0f}%"} for i in range(5)]
+    y_ticks = [{"y": sy(v), "label": f"{v:.2f}%"} for v in (y_lo, 0.0, max(ys)) if y_lo < 0 or v >= 0]
+    return {
+        "width": width, "height": height,
+        "path": "M" + " L".join(f"{sx(f):.1f},{sy(g):.1f}" for f, g in points),
+        "zero_y": sy(0.0), "left": pad_l, "right": width - pad_r, "bottom": height - pad_b,
+        "markers": markers, "x_ticks": x_ticks, "y_ticks": y_ticks,
+        "points": [[round(f * 100, 2), round(g, 4), round(sx(f), 1), round(sy(g), 1)] for f, g in points],
+    }
+
+
+@router.get("/kelly", response_class=HTMLResponse)
+async def kelly_page(request: Request) -> HTMLResponse:
+    return templates.TemplateResponse(request, "kelly.html", {
+        "page": "kelly", "stream": "/ui/kelly/stream", "books": [], "live_bets": _live_bet_options(),
+    })
+
+
+@router.get("/ui/kelly/stream")
+async def kelly_stream(
+    request: Request,
+    bankroll: float = Query(1000, gt=0, le=10_000_000),
+    odds: str = Query("+110", max_length=12),
+    win_pct: float = Query(55, gt=0, lt=100),
+    bet: str = Query("", max_length=200),
+    multiple: float = Query(0.25, gt=0, le=1),
+    max_exposure_pct: float = Query(25, gt=0, le=100),
+    round_to: float = Query(1, ge=0),
+    conservative: bool = Query(False),
+) -> StreamingResponse:
+    def render() -> str:
+        key = ("kelly-board", bankroll, odds, win_pct, bet, multiple, max_exposure_pct, round_to, conservative)
+        return store.memo(key, lambda: _render_kelly(bankroll, odds, win_pct, bet, multiple,
+                                                     max_exposure_pct, round_to, conservative))
+
+    return _sse(request, render)
+
+
+def _render_kelly(bankroll: float, odds: str, win_pct: float, bet_id: str, multiple: float,
+                  max_exposure_pct: float, round_to: float, conservative: bool) -> str:
+    live = _live_bet_options()
+    picked = next((b for b in live if b["id"] == bet_id), None) if bet_id else None
+    error = None
+    if picked:
+        p = picked["fair_prob_low"] if conservative else picked["fair_prob"]
+        decimal, american = picked["decimal"], picked["odds"]
+    else:
+        p = win_pct / 100
+        try:
+            american = float(odds.replace("+", ""))
+            if -100 < american < 100:
+                raise ValueError
+            decimal = american_to_decimal(american)
+        except ValueError:
+            error = "Odds must be American odds: −100 or lower, or +100 or higher."
+            decimal, american = 2.0, 100.0
+    full = kelly_fraction(p, decimal)
+    rows = kelly.sizing_table(p, decimal, bankroll, round_to)
+    sheet, scale = kelly.kelly_sheet(live, bankroll, multiple, max_exposure_pct / 100, round_to, conservative)
+    return templates.get_template("_kelly_board.html").render(
+        status=store.status(), error=error, picked=picked, bet_missing=bool(bet_id and not picked),
+        p=p, decimal=decimal, american=american, full=full, edge=p * decimal - 1,
+        rows=rows, chosen=multiple, curve=_curve_view(p, decimal, full),
+        sheet=sheet, scale=scale, bankroll=bankroll, max_exposure_pct=max_exposure_pct,
+        sheet_total=sum(r.stake for r in sheet), conservative=conservative,
+    )

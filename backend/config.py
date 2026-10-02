@@ -30,12 +30,13 @@ class Settings(BaseSettings):
     # or "eu"/"uk" finds more arbs but multiplies credit cost.
     odds_regions: str = "us"
     # Explicit book list; takes priority over regions. Every 10 books costs
-    # the same as one region. The sharp books (first five) anchor +EV pricing;
-    # the rest are the US books you'd actually bet at.
+    # the same as one region, so this stays at 20. The sharp sources (first
+    # six) anchor +EV pricing; the rest are the US books you'd bet at.
+    # LowVig is left out because it copies BetOnline's prices exactly.
     odds_bookmakers: str = (
-        "pinnacle,betonlineag,lowvig,novig,prophetx,"
+        "pinnacle,kalshi,polymarket,betonlineag,novig,prophetx,"
         "draftkings,fanduel,betmgm,williamhill_us,fanatics,espnbet,betrivers,"
-        "hardrockbet,bovada,ballybet,fliff,betparx,betus,mybookieag,betanysports"
+        "hardrockbet,bovada,ballybet,fliff,betparx,betus,mybookieag"
     )
     # Explicit comma-separated sport keys. Empty → auto-discover in-season
     # sports via /sports, which is free (costs no credits).

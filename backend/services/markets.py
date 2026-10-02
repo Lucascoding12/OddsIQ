@@ -31,7 +31,19 @@ EXCHANGE_COMMISSION: dict[str, float] = {
     "betopenly": 0.02,
     "novig": 0.0,
     "prophetx": 0.01,
+    "polymarket": 0.0,
+    "kalshi": 0.0,  # price-dependent; see KALSHI_FEE_RATE
 }
+# Kalshi's trading fee is 0.07 × C × P × (1 − P) on C contracts at price P.
+# Winnings per contract are (1 − P), so the fee is 0.07 × P of net winnings.
+KALSHI_FEE_RATE = 0.07
+
+
+def commission_for(book: str, decimal: float, commissions: dict[str, float]) -> float:
+    """Share of net winnings lost to exchange fees for this book at this price."""
+    if book == "kalshi" and "kalshi" in commissions:
+        return KALSHI_FEE_RATE / decimal  # price P = 1 / decimal
+    return commissions.get(book, 0.0)
 
 # Group key: ("h2h", None, frozenset(names)) | ("spreads", home_line) | ("totals", line)
 GroupKey = tuple
@@ -98,7 +110,6 @@ def group_game(game: dict, now: float, cfg: ScanConfig) -> GameMarkets | None:
         book_key = book.get("key", "")
         if cfg.books is not None and book_key not in cfg.books:
             continue
-        commission = cfg.commissions.get(book_key, 0.0)
         book_title = book.get("title", book_key)
 
         for market in book.get("markets", ()):
@@ -132,6 +143,7 @@ def group_game(game: dict, now: float, cfg: ScanConfig) -> GameMarkets | None:
                     required.setdefault(gkey, frozenset(("Over", "Under")))
 
                 decimal = american_to_decimal(o["price"])
+                commission = commission_for(book_key, decimal, cfg.commissions)
                 if commission:
                     decimal = apply_commission(decimal, commission)
                 groups.setdefault(gkey, {}).setdefault(book_key, {})[name] = Quote(

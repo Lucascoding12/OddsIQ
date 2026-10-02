@@ -8,23 +8,39 @@ Method, per market group (same game, market and line):
   3. Every soft-book price is scored:  EV = fair_prob × decimal − 1.
      Positive EV means the soft book is paying more than the outcome is worth.
 
-Why these sharp books (and weights):
-  Pinnacle is the market standard for true odds: thin margins, high limits,
-  and it doesn't limit winners, so its lines absorb sharp money fastest.
-  Independent sharpness rankings (Pikkit's book-weighting study across NFL,
-  NBA, MLB) put Pinnacle, Circa, BookMaker and BetOnline at the top and
-  BetMGM at the bottom. Circa and BookMaker aren't in The Odds API feed.
-  LowVig is BetOnline's low-margin sister site, so the two are one *family*
-  and count once. Novig and ProphetX are US exchanges whose prices are set by
-  bettors, which keeps margins near zero.
+Why these sharp sources (and weights):
+  No single venue is clearly sharpest. A 5,333-game study (Northwestern,
+  2025–26) found Kalshi, Polymarket and the sportsbook consensus within
+  ±0.001 Brier score of each other at the close, holding with Pinnacle as
+  the benchmark. So the fair line blends several independent sources rather
+  than trusting one.
+  - Pinnacle: longest track record (closing-line r² ≈ 0.997 vs results over
+    ~400k soccer games), high limits, doesn't limit winners → highest weight.
+  - Kalshi, Polymarket: as accurate as books at the close, but slightly
+    overconfident (calibration slope ≈ 0.955), so their probabilities are
+    pulled toward 50% before blending (PREDICTION_MARKET_SLOPE).
+  - BetOnline: top-ranked in Pikkit's sharpness study. LowVig copies its
+    lines exactly, so it's a family member that never counts twice.
+  - Novig, ProphetX: US exchanges with near-zero margins but thinner volume.
+
+Confidence:
+  Sharp sources disagree by ~1.4 probability points on a typical market,
+  which is as large as most edges. So each bet also gets a worst-case EV
+  (priced against the least favorable sharp source) and a confidence level:
+    strong  3+ independent sources, and every one says the bet is +EV
+    fair    2+ sources, every one says +EV
+    thin    one source, or the sources disagree on whether it's +EV
 
 Unlike arbs, +EV bets can lose individually; the edge only shows up over
 many bets. Hence Kelly sizing instead of balanced stakes.
 """
+import math
 from dataclasses import dataclass
+from typing import NamedTuple
 
 from services.markets import GameMarkets, Quote, ScanConfig, label
 from services.odds_math import (
+    american_to_decimal,
     decimal_to_american,
     devig_power,
     expected_value,
@@ -34,6 +50,8 @@ from services.odds_math import (
 
 SHARP_WEIGHTS: dict[str, float] = {
     "pinnacle": 1.0,
+    "kalshi": 0.9,
+    "polymarket": 0.7,
     "betonlineag": 0.6,
     "lowvig": 0.6,
     "novig": 0.5,
@@ -41,12 +59,28 @@ SHARP_WEIGHTS: dict[str, float] = {
     "betfair_ex_eu": 0.6,
     "betfair_ex_uk": 0.6,
 }
+# Calibration slopes from the Northwestern study: prediction-market prices are
+# a little too extreme, so their log-odds are scaled down before blending.
+PREDICTION_MARKET_SLOPE: dict[str, float] = {"kalshi": 0.956, "polymarket": 0.954}
 # Books that copy one another's lines — only the first present counts.
 SHARP_FAMILIES: dict[str, str] = {"lowvig": "betonlineag"}
 
 # Edges this large usually mean a stale soft line or a sharp quote we
 # matched wrongly, not free money. Shown, but flagged.
 SUSPICIOUS_EV_PCT = 10.0
+
+
+class FairLine(NamedTuple):
+    probs: dict[str, float]                   # blended fair probability per outcome
+    titles: tuple[str, ...]                   # sharp sources used
+    per_source: dict[str, dict[str, float]]   # source title → outcome → fair probability
+
+
+def _recalibrate(probs: list[float], slope: float) -> list[float]:
+    """Scale log-odds by `slope` (< 1 pulls toward 50%), then renormalize."""
+    adjusted = [1 / (1 + math.exp(-slope * math.log(p / (1 - p)))) for p in probs]
+    total = sum(adjusted)
+    return [a / total for a in adjusted]
 
 
 @dataclass(slots=True)
@@ -67,13 +101,32 @@ class EvBet:
     # every soft quote on this outcome with EV ≥ the scan floor, best first
     offers: tuple[tuple[Quote, float], ...]
     suspicious: bool
+    # (source title, that source's fair probability for this outcome)
+    sharp_probs: tuple[tuple[str, float], ...] = ()
+
+    @property
+    def fair_prob_low(self) -> float:
+        """The least favorable single sharp source's view of this outcome."""
+        return min((p for _, p in self.sharp_probs), default=self.fair_prob)
 
     @property
     def ev_pct(self) -> float:
         return self.offers[0][1] * 100
 
+    def worst_case_ev(self, decimal: float) -> float:
+        return expected_value(self.fair_prob_low, decimal)
 
-def fair_line(gm: GameMarkets, gkey: tuple) -> tuple[dict[str, float], tuple[str, ...]] | None:
+    @property
+    def confidence(self) -> str:
+        agrees = self.worst_case_ev(self.offers[0][0].decimal) > 0
+        if agrees and len(self.sharp_books) >= 3:
+            return "strong"
+        if agrees and len(self.sharp_books) >= 2:
+            return "fair"
+        return "thin"
+
+
+def fair_line(gm: GameMarkets, gkey: tuple) -> FairLine | None:
     """Weighted blend of de-vigged sharp prices for one group, or None without a sharp quote."""
     complete = gm.complete_books(gkey)
     used: dict[str, dict[str, Quote]] = {}
@@ -89,15 +142,19 @@ def fair_line(gm: GameMarkets, gkey: tuple) -> tuple[dict[str, float], tuple[str
 
     selections = sorted(gm.required[gkey])
     blended = dict.fromkeys(selections, 0.0)
+    per_source: dict[str, dict[str, float]] = {}
     total_weight = 0.0
     for book, quotes in used.items():
         weight = SHARP_WEIGHTS[book]
-        fair = devig_power([quotes[s].decimal for s in selections])
+        # Posted prices, not fee-adjusted: a venue's fee is its cost, not its opinion.
+        fair = devig_power([american_to_decimal(quotes[s].american) for s in selections])
+        if book in PREDICTION_MARKET_SLOPE:
+            fair = _recalibrate(fair, PREDICTION_MARKET_SLOPE[book])
         for s, p in zip(selections, fair):
             blended[s] += weight * p
         total_weight += weight
-    titles = tuple(next(iter(q.values())).book_title for q in used.values())
-    return {s: p / total_weight for s, p in blended.items()}, titles
+        per_source[next(iter(quotes.values())).book_title] = dict(zip(selections, fair))
+    return FairLine({s: p / total_weight for s, p in blended.items()}, tuple(per_source), per_source)
 
 
 def ev_from_grouped(gm: GameMarkets, cfg: ScanConfig, min_ev_pct: float = 0.0) -> list[EvBet]:
@@ -107,7 +164,7 @@ def ev_from_grouped(gm: GameMarkets, cfg: ScanConfig, min_ev_pct: float = 0.0) -
         fair = fair_line(gm, gkey)
         if fair is None:
             continue
-        probs, sharp_titles = fair
+        probs, sharp_titles = fair.probs, fair.titles
         market, line = gkey[0], gkey[1]
 
         for selection, p in probs.items():
@@ -136,6 +193,7 @@ def ev_from_grouped(gm: GameMarkets, cfg: ScanConfig, min_ev_pct: float = 0.0) -
                 selection=selection,
                 point=point,
                 fair_prob=p,
+                sharp_probs=tuple((t, src[selection]) for t, src in fair.per_source.items()),
                 sharp_books=sharp_titles,
                 offers=tuple(offers),
                 suspicious=offers[0][1] * 100 > SUSPICIOUS_EV_PCT,
@@ -170,6 +228,9 @@ def ev_payload(
         "fair_odds": decimal_to_american(1 / bet.fair_prob),
         "sharp_books": list(bet.sharp_books),
         "ev_pct": round(ev * 100, 2),
+        "worst_case_ev_pct": round(bet.worst_case_ev(best.decimal) * 100, 2),
+        "confidence": bet.confidence,
+        "sharp_detail": {t: round(p, 4) for t, p in bet.sharp_probs},
         "book": best.book,
         "book_title": best.book_title,
         "odds": best.american,

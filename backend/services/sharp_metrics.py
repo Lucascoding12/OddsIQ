@@ -54,7 +54,7 @@ def sharp_vs_public(grouped: list[GameMarkets], min_soft_books: int = 3) -> list
             fair = fair_line(gm, gkey)
             if fair is None:
                 continue
-            sharp_probs, sharp_titles = fair
+            sharp_probs, sharp_titles = fair.probs, fair.titles
             selections = sorted(gm.required[gkey])
             soft = [
                 devig_power([quotes[s].decimal for s in selections])

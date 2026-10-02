@@ -107,13 +107,13 @@ def _blocks(gm: GameMarkets, pq: ParsedQuery, focus: str | None) -> list[dict]:
         groups = sorted(by_market.get(market, []), key=lambda g: len(g[1]), reverse=True)[:LINES_PER_MARKET]
         for gkey, by_book in groups:
             fair = fair_line(gm, gkey)
-            probs = fair[0] if fair else {}
+            probs = fair.probs if fair else {}
             sides = sorted(gm.required[gkey], key=lambda s: (s != focus, s))
             if focus and focus in sides:
                 sides = [focus]
             blocks.append({
                 "market": MARKET_NAMES[market],
-                "sharp_books": list(fair[1]) if fair else [],
+                "sharp_books": list(fair.titles) if fair else [],
                 "sides": [_side(gm, gkey, by_book, s, probs.get(s)) for s in sides],
             })
     return blocks

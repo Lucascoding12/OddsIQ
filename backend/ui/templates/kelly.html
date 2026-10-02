@@ -1,0 +1,121 @@
+{% extends "base.html" %}
+{% block title %}OddsIQ Kelly{% endblock %}
+{% block style %}
+.kelly-explain { max-width: 70ch; margin: 0 0 28px; }
+.kelly-explain h1 { margin: 0 0 6px; font-size: 32px; font-weight: 700; }
+.kelly-explain h2 { margin: 24px 0 4px; font-size: 20px; font-weight: 700; }
+.kelly-explain p { margin: 0 0 8px; color: var(--muted); }
+.kelly-explain p strong { color: var(--ink); }
+.formula {
+  display: inline-block; margin: 6px 0 10px; padding: 10px 16px;
+  font-size: 24px; font-weight: 600; letter-spacing: 0.01em;
+  background: var(--sheet); border: 1px solid var(--rule); border-left: 4px solid var(--green); border-radius: 3px;
+}
+.manual { display: contents; }
+.bar:has(select[name=bet] option:checked:not([value=""])) .manual .field { opacity: 0.45; }
+.field select[name=bet] { max-width: 340px; }
+.chart { position: relative; max-width: 680px; }
+.chart svg { display: block; width: 100%; height: auto; }
+.chart .axis { stroke: var(--rule); stroke-width: 1; }
+.chart .zero { stroke: var(--muted); stroke-width: 1; stroke-dasharray: 3 4; }
+.chart .line { fill: none; stroke: var(--chart-line); stroke-width: 2; }
+.chart .marker { fill: var(--chart-line); stroke: var(--paper); stroke-width: 2; }
+.chart .marker--chosen { fill: var(--green); }
+.chart text { fill: var(--muted); font-size: 12px; font-family: inherit; }
+.chart text.mlabel { fill: var(--ink); font-size: 13px; font-weight: 600; }
+.chart .cross { stroke: var(--muted); stroke-width: 1; opacity: 0; }
+.chart .dot { fill: var(--ink); opacity: 0; }
+.tip {
+  position: absolute; pointer-events: none; opacity: 0;
+  padding: 6px 10px; font-size: 14px; white-space: nowrap;
+  background: var(--well); border: 1px solid var(--rule); border-radius: 4px; color: var(--ink);
+}
+tr.chosen td { background: var(--green-wash); }
+{% endblock %}
+{% block controls %}
+    <label class="field">Bankroll ($)<input type="number" name="bankroll" value="1000" min="1" step="any"></label>
+    <label class="field">Live bet
+      <select name="bet">
+        <option value="">Enter my own</option>
+        {% for b in live_bets %}<option value="{{ b.id }}">{{ b.label }} ({{ "%+.1f"|format(b.ev_pct) }}%)</option>{% endfor %}
+      </select>
+    </label>
+    <div class="manual">
+      <label class="field">Odds<input name="odds" value="+110" inputmode="decimal"></label>
+      <label class="field">Win chance (%)<input type="number" name="win_pct" value="55" min="1" max="99" step="0.1"></label>
+    </div>
+    <label class="field">Bet size
+      <select name="multiple">
+        <option value="1">Full Kelly</option>
+        <option value="0.5">Half Kelly</option>
+        <option value="0.25" selected>Quarter Kelly</option>
+        <option value="0.1">Tenth Kelly</option>
+      </select>
+    </label>
+    <label class="field">Max open at once (%)<input type="number" name="max_exposure_pct" value="25" min="1" max="100" step="1"></label>
+    <label class="field">Round to ($)<input type="number" name="round_to" value="1" min="0" step="any"></label>
+    <label class="check"><input type="checkbox" name="conservative"> Use the least favorable sharp price</label>
+{% endblock %}
+{% block filters %}{% endblock %}
+{% block intro %}
+<article class="kelly-explain">
+  <h1>Kelly criterion</h1>
+  <p>
+    Finding an edge is half the job. The other half is how much to bet. Bet too little and
+    your bankroll barely grows. Bet too much and a normal losing streak sets you back further
+    than the edge can recover. Kelly is the bet size that grows a bankroll fastest over the long run.
+  </p>
+
+  <h2>The formula</h2>
+  <div class="formula">bet = (p × d − 1) ÷ (d − 1)</div>
+  <p>
+    <strong>p</strong> is the true chance the bet wins and <strong>d</strong> is the decimal odds
+    you're getting. The top, p × d − 1, is your edge: what each dollar returns on average.
+    The bottom, d − 1, is what each dollar wins. Big edge at short odds means a big bet;
+    small edge at long odds means a small one. No edge means no bet.
+  </p>
+
+  <h2>Why almost nobody bets full Kelly</h2>
+  <p>
+    Kelly assumes you know <strong>p</strong> exactly. You never do. On OddsIQ, p comes from the
+    sharp books, and they typically disagree with each other by more than a point. If your
+    estimate is a little high, full Kelly is already over-betting. The curve below shows the
+    cost: growth peaks at full Kelly, falls to zero around twice Kelly, and turns negative after.
+    Half Kelly keeps about three quarters of the growth with a fraction of the swings, and quarter
+    Kelly is where most professional bettors live.
+  </p>
+
+  <h2>Many bets at once</h2>
+  <p>
+    Kelly sizes one bet at a time. With several open together, the stakes add up fast, so the
+    sheet at the bottom caps the total you have open and scales every bet down evenly to fit.
+  </p>
+</article>
+{% endblock %}
+{% block script %}
+<script>
+// Crosshair + tooltip for the growth curve. The board is re-rendered on every
+// update, so listen on the container instead of the SVG itself.
+const boardEl = document.getElementById("board");
+boardEl.addEventListener("pointermove", e => {
+  const svg = e.target.closest?.(".chart svg");
+  if (!svg) return;
+  const pts = JSON.parse(svg.dataset.points);
+  const box = svg.getBoundingClientRect();
+  const x = (e.clientX - box.left) * (svg.viewBox.baseVal.width / box.width);
+  let best = pts[0];
+  for (const p of pts) if (Math.abs(p[2] - x) < Math.abs(best[2] - x)) best = p;
+  const cross = svg.querySelector(".cross"), dot = svg.querySelector(".dot"), tip = svg.parentElement.querySelector(".tip");
+  cross.setAttribute("x1", best[2]); cross.setAttribute("x2", best[2]); cross.style.opacity = 1;
+  dot.setAttribute("cx", best[2]); dot.setAttribute("cy", best[3]); dot.style.opacity = 1;
+  tip.textContent = `Bet ${best[0].toFixed(1)}% of bankroll: ${best[1] >= 0 ? "+" : ""}${best[1].toFixed(3)}% growth per bet`;
+  const scale = box.width / svg.viewBox.baseVal.width;
+  tip.style.left = Math.min(best[2] * scale + 12, box.width - tip.offsetWidth) + "px";
+  tip.style.top = Math.max(0, best[3] * scale - 40) + "px";
+  tip.style.opacity = 1;
+});
+boardEl.addEventListener("pointerleave", () => {
+  boardEl.querySelectorAll(".chart .cross, .chart .dot, .chart .tip").forEach(el => el.style.opacity = 0);
+}, true);
+</script>
+{% endblock %}
