@@ -7,7 +7,7 @@
   <p>
     {{ picked.label }}, {{ picked.game }}.
     {% if conservative %}Win chance {{ "%.1f"|format(p * 100) }}% from the least favorable sharp source.
-    {% else %}Win chance {{ "%.1f"|format(p * 100) }}% from the blended sharp fair line.{% endif %}
+    {% else %}Win chance {{ "%.1f"|format(p * 100) }}% from {{ picked.reference }}'s fair price.{% endif %}
   </p>
   {% endif %}
   {% if full > 0 %}

@@ -11,7 +11,7 @@ from dataclasses import dataclass
 import orjson
 from fastapi import APIRouter, Depends, Query, Response
 
-from services.ev_engine import SHARP_WEIGHTS, ev_payload
+from services.ev_engine import CROSS_CHECKS, REFERENCE_PRIORITY, ev_payload
 from services.odds_store import store
 
 router = APIRouter(tags=["ev"])
@@ -91,6 +91,6 @@ async def get_ev(q: EvQuery = Depends(ev_query)) -> Response:
 
 
 @router.get("/ev/sharp-books")
-async def sharp_books() -> dict[str, float]:
-    """The books treated as the true line, with their blend weights."""
-    return SHARP_WEIGHTS
+async def sharp_books() -> dict[str, list[str]]:
+    """Reference books in priority order, and the books that only cross-check them."""
+    return {"reference_priority": list(REFERENCE_PRIORITY), "cross_checks": list(CROSS_CHECKS)}

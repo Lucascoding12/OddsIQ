@@ -16,7 +16,7 @@ All functions are pure over the grouped snapshot; only MoveTracker keeps state.
 import statistics
 from dataclasses import dataclass
 
-from services.ev_engine import SHARP_WEIGHTS, fair_line
+from services.ev_engine import SHARP_BOOKS, fair_line
 from services.markets import GameMarkets, label
 from services.odds_math import devig_power
 
@@ -59,7 +59,7 @@ def sharp_vs_public(grouped: list[GameMarkets], min_soft_books: int = 3) -> list
             soft = [
                 devig_power([quotes[s].decimal for s in selections])
                 for book, quotes in gm.complete_books(gkey).items()
-                if book not in SHARP_WEIGHTS
+                if book not in SHARP_BOOKS
             ]
             if len(soft) < min_soft_books:
                 continue
@@ -115,7 +115,7 @@ def book_holds(grouped: list[GameMarkets]) -> list[dict]:
                 titles[book] = next(iter(quotes.values())).book_title
     rows = [
         {"book": b, "book_title": titles[b], "avg_hold_pct": statistics.fmean(h) * 100,
-         "markets": len(h), "sharp": b in SHARP_WEIGHTS}
+         "markets": len(h), "sharp": b in SHARP_BOOKS}
         for b, h in holds.items() if len(h) >= 5
     ]
     rows.sort(key=lambda r: r["avg_hold_pct"])
@@ -169,14 +169,14 @@ class MoveTracker:
                         # Positive = the outcome got more likely (price shortened).
                         delta = 1 / q.decimal - 1 / seen.decimal
                         moved.append((book, q, seen, delta))
-                    sharp = [m for m in moved if m[0] in SHARP_WEIGHTS and abs(m[3]) >= MOVE_THRESHOLD]
+                    sharp = [m for m in moved if m[0] in SHARP_BOOKS and abs(m[3]) >= MOVE_THRESHOLD]
                     if not sharp:
                         continue
                     direction = 1 if sum(m[3] for m in sharp) > 0 else -1
                     agreeing = [m for m in sharp if (m[3] > 0) == (direction > 0)]
                     lagging = [
                         m for m in moved
-                        if m[0] not in SHARP_WEIGHTS and abs(m[3]) < MOVE_THRESHOLD
+                        if m[0] not in SHARP_BOOKS and abs(m[3]) < MOVE_THRESHOLD
                     ]
                     rows.append({
                         **_base(gm, gkey),

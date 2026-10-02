@@ -25,7 +25,7 @@
         </tr>
         {% endfor %}
       </table></div>
-      {% if side.fair_prob %}<p class="small">Fair price {{ "%.1f"|format(side.fair_prob * 100) }}% from {{ b.sharp_books | join(", ") }}.</p>{% endif %}
+      {% if side.fair_prob %}<p class="small">Fair price {{ "%.1f"|format(side.fair_prob * 100) }}% from {{ b.sharp_books[0] }}.</p>{% endif %}
     </div>
     {% endfor %}
   {% endfor %}

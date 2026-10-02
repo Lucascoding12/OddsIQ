@@ -13,7 +13,7 @@ the sharp fair price when sharp books quote it too.
 import re
 from dataclasses import dataclass
 
-from services.ev_engine import SHARP_WEIGHTS, fair_line
+from services.ev_engine import SHARP_BOOKS, fair_line
 from services.markets import GameMarkets, label
 from services.odds_math import american_to_decimal, expected_value
 
@@ -126,7 +126,7 @@ def _side(gm: GameMarkets, gkey: tuple, by_book: dict, selection: str, fair_prob
         "odds": q.american,
         "implied": 1 / q.decimal,
         "ev_pct": expected_value(fair_prob, q.decimal) * 100 if fair_prob else None,
-        "sharp": q.book in SHARP_WEIGHTS,
+        "sharp": q.book in SHARP_BOOKS,
         # Exchange commission lowers the effective price below the posted odds.
         "after_fee": abs(q.decimal - american_to_decimal(q.american)) > 1e-9,
     } for q in quotes]

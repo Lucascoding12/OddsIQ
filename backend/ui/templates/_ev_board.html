@@ -17,8 +17,9 @@
           {% if b.first_seen %}Open for <time data-age="{{ b.first_seen }}"></time>.{% endif %}
         </p>
         <p>
-          Fair price {{ "%+d"|format(b.fair_odds) }}, blended from
-          {% for t, p in b.sharp_detail.items() %}{{ t }} {{ "%.1f"|format(p * 100) }}%{{ ", " if not loop.last }}{% endfor %}.
+          Fair price {{ "%+d"|format(b.fair_odds) }} from {{ b.reference }} ({{ "%.1f"|format(b.fair_prob * 100) }}%).
+          {% if b.sharp_detail | length > 1 %}Checked against
+          {% for t, p in b.sharp_detail.items() if t != b.reference %}{{ t }} {{ "%.1f"|format(p * 100) }}%{{ ", " if not loop.last }}{% endfor %}.{% else %}No other sharp book quotes it.{% endif %}
           {% if b.sharp_detail | length > 1 %}Worst case {{ "%+.1f"|format(b.worst_case_ev_pct) }}% against the least favorable source.{% endif %}
           {% if b.also %}Also good at
             {% for o in b.also %}{{ o.book_title }} {{ "%+d"|format(o.odds) }} ({{ "%+.1f"|format(o.ev_pct) }}%){{ ", " if not loop.last else "." }}{% endfor %}

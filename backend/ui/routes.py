@@ -20,14 +20,14 @@ from api.v1.tools import sharp_summary
 from services import calculators, kelly, line_shop
 from services.markets import label
 from services.odds_math import american_to_decimal, kelly_fraction
-from services.ev_engine import SHARP_WEIGHTS
+from services.ev_engine import SHARP_BOOKS
 from services.odds_store import store
 
 router = APIRouter(include_in_schema=False)
 templates = Jinja2Templates(directory=Path(__file__).parent / "templates")
 
 MARKET_NAMES = {"h2h": "Moneyline", "spreads": "Spread", "totals": "Total"}
-SHARP_NAMES = "Pinnacle, Kalshi, Polymarket, BetOnline, Novig and ProphetX"
+SHARP_NAMES = "Pinnacle (then Betfair, Kalshi, Polymarket), checked against BetOnline, Novig and ProphetX"
 
 
 def available_books(exclude_sharp: bool = False) -> list[tuple[str, str]]:
@@ -35,7 +35,7 @@ def available_books(exclude_sharp: bool = False) -> list[tuple[str, str]]:
         books: dict[str, str] = {}
         for game in store.games:
             for b in game.get("bookmakers", ()):
-                if exclude_sharp and b["key"] in SHARP_WEIGHTS:
+                if exclude_sharp and b["key"] in SHARP_BOOKS:
                     continue
                 books.setdefault(b["key"], b.get("title", b["key"]))
         return sorted(books.items(), key=lambda kv: kv[1].lower())
@@ -193,7 +193,7 @@ def _live_bet_options() -> list[dict]:
                 "game": f"{b.away_team} at {b.home_team}",
                 "book_title": q.book_title, "odds": q.american, "decimal": q.decimal,
                 "fair_prob": b.fair_prob, "fair_prob_low": b.fair_prob_low,
-                "ev_pct": ev * 100, "confidence": b.confidence,
+                "ev_pct": ev * 100, "confidence": b.confidence, "reference": b.sharp_books[0],
             })
         return out
 

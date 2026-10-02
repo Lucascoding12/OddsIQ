@@ -2,34 +2,34 @@
 +EV engine — prices soft-book odds against a sharp-book "true" line.
 
 Method, per market group (same game, market and line):
-  1. Each sharp book quoting the full outcome set is de-vigged (power method)
-     into fair probabilities.
-  2. Those are blended by SHARP_WEIGHTS into one fair probability per outcome.
-  3. Every soft-book price is scored:  EV = fair_prob × decimal − 1.
+  1. The fair price comes from ONE reference book, the first in
+     REFERENCE_PRIORITY that quotes the full outcome set:
+         Pinnacle → Betfair Exchange → Kalshi → Polymarket
+     Its prices are de-vigged (power method) into fair probabilities.
+  2. Every soft-book price is scored:  EV = fair_prob × decimal − 1.
      Positive EV means the soft book is paying more than the outcome is worth.
+  3. The other sharp sources (the rest of the priority list plus BetOnline,
+     Novig and ProphetX) never set the price; they cross-check it.
 
-Why these sharp sources (and weights):
-  No single venue is clearly sharpest. A 5,333-game study (Northwestern,
-  2025–26) found Kalshi, Polymarket and the sportsbook consensus within
-  ±0.001 Brier score of each other at the close, holding with Pinnacle as
-  the benchmark. So the fair line blends several independent sources rather
-  than trusting one.
-  - Pinnacle: longest track record (closing-line r² ≈ 0.997 vs results over
-    ~400k soccer games), high limits, doesn't limit winners → highest weight.
-  - Kalshi, Polymarket: as accurate as books at the close, but slightly
-    overconfident (calibration slope ≈ 0.955), so their probabilities are
-    pulled toward 50% before blending (PREDICTION_MARKET_SLOPE).
-  - BetOnline: top-ranked in Pikkit's sharpness study. LowVig copies its
-    lines exactly, so it's a family member that never counts twice.
-  - Novig, ProphetX: US exchanges with near-zero margins but thinner volume.
+Why this order:
+  - Pinnacle: the market standard. Thin margins, high limits, doesn't limit
+    winners, and the longest track record (closing-line r² ≈ 0.997 vs
+    results over ~400k soccer games).
+  - Betfair Exchange: the largest betting exchange; prices are set by
+    bettors trading against each other.
+  - Kalshi, Polymarket: as accurate as sportsbooks at the close in a
+    5,333-game study (Northwestern, 2025–26), but slightly overconfident
+    (calibration slope ≈ 0.955), so their probabilities are pulled toward
+    50% first (PREDICTION_MARKET_SLOPE).
+  - LowVig copies BetOnline's lines exactly, so it never counts twice.
 
 Confidence:
   Sharp sources disagree by ~1.4 probability points on a typical market,
   which is as large as most edges. So each bet also gets a worst-case EV
   (priced against the least favorable sharp source) and a confidence level:
-    strong  3+ independent sources, and every one says the bet is +EV
-    fair    2+ sources, every one says +EV
-    thin    one source, or the sources disagree on whether it's +EV
+    strong  reference + 2 cross-checks, and every one says the bet is +EV
+    fair    reference + 1 cross-check, every one says +EV
+    thin    reference only, or a cross-check says it isn't +EV
 
 Unlike arbs, +EV bets can lose individually; the edge only shows up over
 many bets. Hence Kelly sizing instead of balanced stakes.
@@ -48,17 +48,11 @@ from services.odds_math import (
     round_stakes,
 )
 
-SHARP_WEIGHTS: dict[str, float] = {
-    "pinnacle": 1.0,
-    "kalshi": 0.9,
-    "polymarket": 0.7,
-    "betonlineag": 0.6,
-    "lowvig": 0.6,
-    "novig": 0.5,
-    "prophetx": 0.4,
-    "betfair_ex_eu": 0.6,
-    "betfair_ex_uk": 0.6,
-}
+# The first of these that quotes a market sets its fair price.
+REFERENCE_PRIORITY: tuple[str, ...] = ("pinnacle", "betfair_ex_eu", "betfair_ex_uk", "kalshi", "polymarket")
+# Sharp books that only cross-check the reference.
+CROSS_CHECKS: tuple[str, ...] = ("betonlineag", "lowvig", "novig", "prophetx")
+SHARP_BOOKS: frozenset[str] = frozenset(REFERENCE_PRIORITY + CROSS_CHECKS)
 # Calibration slopes from the Northwestern study: prediction-market prices are
 # a little too extreme, so their log-odds are scaled down before blending.
 PREDICTION_MARKET_SLOPE: dict[str, float] = {"kalshi": 0.956, "polymarket": 0.954}
@@ -71,9 +65,13 @@ SUSPICIOUS_EV_PCT = 10.0
 
 
 class FairLine(NamedTuple):
-    probs: dict[str, float]                   # blended fair probability per outcome
-    titles: tuple[str, ...]                   # sharp sources used
+    probs: dict[str, float]                   # the reference book's fair probability per outcome
+    titles: tuple[str, ...]                   # reference first, then cross-checks
     per_source: dict[str, dict[str, float]]   # source title → outcome → fair probability
+
+    @property
+    def reference(self) -> str:
+        return self.titles[0]
 
 
 def _recalibrate(probs: list[float], slope: float) -> list[float]:
@@ -126,35 +124,32 @@ class EvBet:
         return "thin"
 
 
+def _source_probs(quotes: dict[str, Quote], selections: list[str], book: str) -> list[float]:
+    # Posted prices, not fee-adjusted: a venue's fee is its cost, not its opinion.
+    fair = devig_power([american_to_decimal(quotes[s].american) for s in selections])
+    if book in PREDICTION_MARKET_SLOPE:
+        fair = _recalibrate(fair, PREDICTION_MARKET_SLOPE[book])
+    return fair
+
+
 def fair_line(gm: GameMarkets, gkey: tuple) -> FairLine | None:
-    """Weighted blend of de-vigged sharp prices for one group, or None without a sharp quote."""
+    """Fair prices from the highest-priority reference book quoting this market, or None."""
     complete = gm.complete_books(gkey)
-    used: dict[str, dict[str, Quote]] = {}
-    for book, quotes in complete.items():
-        if book not in SHARP_WEIGHTS:
-            continue
-        family = SHARP_FAMILIES.get(book, book)
-        if family != book and family in complete:
-            continue
-        used[book] = quotes
-    if not used:
+    reference = next((b for b in REFERENCE_PRIORITY if b in complete), None)
+    if reference is None:
         return None
 
     selections = sorted(gm.required[gkey])
-    blended = dict.fromkeys(selections, 0.0)
+    ordered = [reference] + [b for b in (*REFERENCE_PRIORITY, *CROSS_CHECKS) if b in complete and b != reference]
     per_source: dict[str, dict[str, float]] = {}
-    total_weight = 0.0
-    for book, quotes in used.items():
-        weight = SHARP_WEIGHTS[book]
-        # Posted prices, not fee-adjusted: a venue's fee is its cost, not its opinion.
-        fair = devig_power([american_to_decimal(quotes[s].american) for s in selections])
-        if book in PREDICTION_MARKET_SLOPE:
-            fair = _recalibrate(fair, PREDICTION_MARKET_SLOPE[book])
-        for s, p in zip(selections, fair):
-            blended[s] += weight * p
-        total_weight += weight
-        per_source[next(iter(quotes.values())).book_title] = dict(zip(selections, fair))
-    return FairLine({s: p / total_weight for s, p in blended.items()}, tuple(per_source), per_source)
+    for book in ordered:
+        family = SHARP_FAMILIES.get(book, book)
+        if family != book and family in complete:
+            continue
+        quotes = complete[book]
+        per_source[next(iter(quotes.values())).book_title] = dict(zip(selections, _source_probs(quotes, selections, book)))
+    titles = tuple(per_source)
+    return FairLine(per_source[titles[0]], titles, per_source)
 
 
 def ev_from_grouped(gm: GameMarkets, cfg: ScanConfig, min_ev_pct: float = 0.0) -> list[EvBet]:
@@ -170,7 +165,7 @@ def ev_from_grouped(gm: GameMarkets, cfg: ScanConfig, min_ev_pct: float = 0.0) -
         for selection, p in probs.items():
             offers = []
             for book, quotes in by_book.items():
-                if book in SHARP_WEIGHTS or selection not in quotes:
+                if book in SHARP_BOOKS or selection not in quotes:
                     continue
                 q = quotes[selection]
                 ev = expected_value(p, q.decimal)
@@ -230,6 +225,7 @@ def ev_payload(
         "ev_pct": round(ev * 100, 2),
         "worst_case_ev_pct": round(bet.worst_case_ev(best.decimal) * 100, 2),
         "confidence": bet.confidence,
+        "reference": bet.sharp_books[0],
         "sharp_detail": {t: round(p, 4) for t, p in bet.sharp_probs},
         "book": best.book,
         "book_title": best.book_title,

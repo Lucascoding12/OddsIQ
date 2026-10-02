@@ -72,15 +72,31 @@ class EvEngineTest(unittest.TestCase):
         self.assertEqual(ev_from_grouped(gm, ScanConfig()), [])
 
     def test_lowvig_not_double_counted_with_betonline(self) -> None:
-        gm = _grouped({"betonlineag": (-110, -110), "lowvig": (-150, 130), "fanduel": (120, -140)})
-        titles = fair_line(gm, next(iter(gm.groups))).titles
-        self.assertEqual(titles, ("Betonlineag",))
+        gm = _grouped({"pinnacle": (-110, -110), "betonlineag": (-110, -110), "lowvig": (-150, 130), "fanduel": (120, -140)})
+        self.assertEqual(fair_line(gm, next(iter(gm.groups))).titles, ("Pinnacle", "Betonlineag"))
 
-    def test_sharps_are_blended_by_weight(self) -> None:
+    def test_reference_priority(self) -> None:
+        def ref(books: dict) -> str | None:
+            line = fair_line(_grouped(books), next(iter(_grouped(books).groups)))
+            return line.reference if line else None
+        all_refs = {"pinnacle": (-110, -110), "betfair_ex_eu": (-120, 100),
+                    "kalshi": (-130, 110), "polymarket": (-140, 120), "draftkings": (-110, -110)}
+        self.assertEqual(ref(all_refs), "Pinnacle")
+        del all_refs["pinnacle"]
+        self.assertEqual(ref(all_refs), "Betfair_Ex_Eu")
+        del all_refs["betfair_ex_eu"]
+        self.assertEqual(ref(all_refs), "Kalshi")
+        del all_refs["kalshi"]
+        self.assertEqual(ref(all_refs), "Polymarket")
+
+    def test_cross_checks_never_set_the_price(self) -> None:
+        gm = _grouped({"novig": (-150, 130), "betonlineag": (-150, 130), "fanduel": (-110, -110)})
+        self.assertIsNone(fair_line(gm, next(iter(gm.groups))))
+
+    def test_reference_price_is_not_blended(self) -> None:
         gm = _grouped({"pinnacle": (-110, -110), "novig": (-150, 150)})
         probs = fair_line(gm, next(iter(gm.groups))).probs
-        self.assertGreater(probs["Chiefs"], 0.5)
-        self.assertLess(probs["Chiefs"], 0.6)  # Pinnacle (weight 1.0) pulls it toward 50%
+        self.assertAlmostEqual(probs["Chiefs"], 0.5, places=9)
 
     def test_offers_ranked_best_first(self) -> None:
         gm = _grouped({"pinnacle": (-105, -105), "fanduel": (-135, 115), "draftkings": (-130, 108)})
@@ -109,13 +125,13 @@ class ConfidenceTest(unittest.TestCase):
         self.assertGreater(bet.worst_case_ev(bet.offers[0][0].decimal), 0)
         self.assertEqual(bet.confidence, "strong")
 
-    def test_disagreeing_sources_are_thin(self) -> None:
-        # The blend makes FanDuel +125 on the Bills +EV; Pinnacle alone does not.
-        gm = _grouped({"pinnacle": (-140, 120), "novig": (110, -110), "fanduel": (-150, 125)})
-        bills = [b for b in ev_from_grouped(gm, ScanConfig()) if b.selection == "Bills"]
-        self.assertTrue(bills)
-        self.assertLessEqual(bills[0].worst_case_ev(bills[0].offers[0][0].decimal), 0)
-        self.assertEqual(bills[0].confidence, "thin")
+    def test_disagreeing_cross_check_makes_it_thin(self) -> None:
+        # Pinnacle says coin flip, so FanDuel +110 on the Bills is +EV; Novig disagrees.
+        gm = _grouped({"pinnacle": (-105, -105), "novig": (-150, 130), "fanduel": (-130, 110)})
+        [bet] = [b for b in ev_from_grouped(gm, ScanConfig()) if b.selection == "Bills"]
+        self.assertAlmostEqual(bet.fair_prob, 0.5, places=9)
+        self.assertLessEqual(bet.worst_case_ev(bet.offers[0][0].decimal), 0)
+        self.assertEqual(bet.confidence, "thin")
 
 
 class EvApiTest(unittest.TestCase):
