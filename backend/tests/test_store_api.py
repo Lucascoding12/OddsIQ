@@ -90,6 +90,20 @@ class ArbApiTest(unittest.TestCase):
         self.assertEqual(body["arbs"], 1)
 
 
+class AdminPollTest(unittest.TestCase):
+    def test_remote_poll_rejected_without_token(self) -> None:
+        from main import app
+        # TestClient's client host is "testclient", i.e. not local.
+        self.assertEqual(TestClient(app).post("/api/v1/admin/poll").status_code, 403)
+
+    def test_wrong_token_rejected(self) -> None:
+        from unittest.mock import patch
+        from main import app, settings
+        with patch.object(settings, "admin_token", "s3cret"):
+            r = TestClient(app).post("/api/v1/admin/poll", headers={"X-Admin-Token": "nope"})
+        self.assertEqual(r.status_code, 403)
+
+
 class UiTest(unittest.TestCase):
     def setUp(self) -> None:
         store.update([_arb_game()])

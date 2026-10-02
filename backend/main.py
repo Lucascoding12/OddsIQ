@@ -12,7 +12,9 @@ import logging
 from contextlib import asynccontextmanager
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
-from fastapi import FastAPI
+import secrets
+
+from fastapi import FastAPI, Header, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 
@@ -117,8 +119,20 @@ async def health():
     return {"status": "ok", "redis": redis_status, "polled_at": store.polled_at}
 
 
+LOCAL_HOSTS = {"127.0.0.1", "::1", "localhost"}
+
+
 @app.post("/api/v1/admin/poll", tags=["admin"])
-async def trigger_poll():
-    """Manually trigger an odds poll (and therefore an arb scan)."""
+async def trigger_poll(request: Request, x_admin_token: str | None = Header(default=None)):
+    """
+    Manually trigger an odds poll (and therefore an arb scan). Every poll
+    spends API credits, so it's locked: ADMIN_TOKEN must match the
+    X-Admin-Token header, or with no token set, only local requests work.
+    """
+    if settings.admin_token:
+        if not x_admin_token or not secrets.compare_digest(x_admin_token, settings.admin_token):
+            raise HTTPException(403, detail="Missing or wrong X-Admin-Token")
+    elif (request.client.host if request.client else "") not in LOCAL_HOSTS:
+        raise HTTPException(403, detail="Set ADMIN_TOKEN to trigger polls remotely")
     await poll_all_odds()
     return store.status()

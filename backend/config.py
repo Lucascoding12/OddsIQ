@@ -22,6 +22,10 @@ class Settings(BaseSettings):
     # allowed via allow_origin_regex in main.py so you don't need to list them.
     cors_origins: list[str] = ["http://localhost:3000", "http://localhost:3001"]
 
+    # Required as the X-Admin-Token header on POST /api/v1/admin/poll.
+    # Unset → the endpoint only answers requests from this machine.
+    admin_token: str = ""
+
     # ── Poller ───────────────────────────────────────────────────────────────
     # Odds API cost per sport request = (#markets) × (#regions).
     # Spreads and totals are where most arbs appear, so they're on by default.
@@ -42,7 +46,8 @@ class Settings(BaseSettings):
     # Explicit comma-separated sport keys. Empty → auto-discover in-season
     # sports via /sports, which is free (costs no credits).
     odds_sports: str = ""
-    odds_max_sports: int = 8
+    # Each sport costs ~6 credits per poll with the default 20 books × 3 markets.
+    odds_max_sports: int = 4
     # Stop polling once remaining credits fall to this floor so the key is
     # never fully drained by the scheduler.
     odds_credit_reserve: int = 25

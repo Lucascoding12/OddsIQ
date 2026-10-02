@@ -21,7 +21,7 @@ BACKEND_PID=$!
 sleep 3
 
 echo "▶ Fetching initial live odds..."
-curl -s -X POST http://localhost:8000/api/v1/admin/poll > /dev/null
+curl -s -X POST http://127.0.0.1:8000/api/v1/admin/poll > /dev/null
 echo "  Odds polled."
 
 echo "▶ Starting frontend on :3000..."
