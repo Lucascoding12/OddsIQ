@@ -5,17 +5,16 @@ GET /odds          — all cached games (optionally filtered by sport_key or cat
 GET /odds/sports   — the full sport category tree
 GET /odds/arb-eligible — sports eligible for 2-way arb scanning
 """
-import json
+import orjson
 from fastapi import APIRouter, Query, Response
 
-from services import odds_cache
+from services.odds_store import store
 
 router = APIRouter(tags=["odds"])
 
-# Odds only change when the poller runs (every few hours in prod), so letting
-# the browser reuse a response for 30s costs nothing in freshness and makes
-# page/filter switches instant.
-CACHE_CONTROL = "public, max-age=30"
+# Short browser cache: odds only change when the poller runs, and a few
+# seconds is enough to make page/filter switches instant without hiding updates.
+CACHE_CONTROL = "public, max-age=5"
 
 # Maps display sport name → The Odds API sport_key
 SPORT_KEYS: dict[str, str] = {
@@ -200,26 +199,23 @@ async def get_odds(
     sport_key: str | None = Query(None, description="Filter by Odds API key, e.g. 'americanfootball_nfl'"),
     category: str | None = Query(None, description="Filter by category, e.g. 'Basketball'"),
 ):
-    """Return live odds from Redis cache. Empty list if not yet polled."""
-    # Try sport-specific key first (cheaper), fall back to all
-    if sport_key:
-        key = f"odds:sport:{sport_key}"
-    elif sport and sport in SPORT_KEYS:
-        key = f"odds:sport:{SPORT_KEYS[sport]}"
-    else:
-        key = "odds:all"
+    """Return live odds from the in-memory snapshot. Empty list if not yet polled."""
+    if sport and sport in SPORT_KEYS:
+        sport_key = sport_key or SPORT_KEYS[sport]
 
-    def compute(games: list[dict]) -> str:
+    def compute() -> bytes:
+        games = store.games
+        if sport_key:
+            games = [g for g in games if g.get("sport_key") == sport_key]
         normalized = [_normalize_game(g) for g in games]
         if category:
             normalized = [g for g in normalized if g["category"] == category]
-        return json.dumps(normalized)
+        return orjson.dumps(normalized)
 
-    # Normalization + serialization are memoized per payload, so repeat
-    # requests between polls skip both the parse and the dumps entirely.
-    payload = await odds_cache.get_derived(key, f"normalized:{category or 'all'}", compute)
+    # Normalization + serialization happen once per snapshot per filter.
+    payload = store.memo(("odds", sport_key, category), compute)
     return Response(
-        content=payload or "[]",
+        content=payload,
         media_type="application/json",
         headers={"Cache-Control": CACHE_CONTROL},
     )

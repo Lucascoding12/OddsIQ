@@ -119,25 +119,41 @@ OddsIQ/
 ## Data Flow
 
 ```
-The Odds API / Kalshi / Polymarket
+The Odds API  (/sports discovery is free; /odds costs markets × regions per sport)
          |
-   [Celery Poller] (every 30s)
+   [Poller — APScheduler, in the API process]   services/odds_poller.py
          |
-    [Redis Cache] ← serves frontend polls quickly
+   [OddsStore — in-memory snapshot, versioned]  services/odds_store.py
+         |  every update → arb scan (services/arb_engine.py, ~ms)
+         |  derived views memoized per version
+         ├── Redis: write-through copy for warm restarts only
          |
-   [PostgreSQL] ← stores historical odds snapshots
-         |
-   [FastAPI] ← REST endpoints consumed by Next.js
-         |
-   [Next.js] ← SWR polling every 30s, renders UI
+   [FastAPI]
+     /                 server-rendered arb screen (ui/, Jinja2 + SSE)
+     /ui/stream        SSE: rendered board HTML on every update
+     /api/v1/arb/*     JSON + SSE + manual calculator
+     /api/v1/status    credits, timings, last error
+     /api/v1/odds, /sharp, /bets, /alerts  (used by the Next.js app)
 ```
+
+The arb screen is the primary UI and is pure Python (Jinja2 templates; the
+page script only opens an EventSource). The Next.js app in `frontend/`
+still works against the same JSON API.
+
+### Arb engine rules
+- Groups quotes into complete outcome sets: h2h (2- or 3-way), spreads
+  (home p / away −p), totals (Over x / Under x). Lines must match exactly.
+- Drops started games (in-play feeds lag), stale quotes, and filtered books.
+- Applies exchange commission before pricing.
+- Flags returns > 8% or single-book "arbs" as suspicious (likely errors).
+- Return % = 1 / Σ(1/decimal) − 1, on total stake.
 
 ---
 
 ## Key Constraints & Decisions
 
 - **Free tier first**: The Odds API free tier (500 req/month) is fine for development. At 30s prod polling intervals, upgrade to $10/month tier or add a scraping fallback layer. Kalshi and Polymarket are always free.
-- **Redis as odds cache**: Never hit the odds API on every user request. The Celery poller writes to Redis; FastAPI reads from Redis. This decouples user load from API rate limits.
+- **In-memory odds store**: Never hit the odds API on every user request. The poller writes to the in-process store; requests read from memory. Redis is only a warm-start copy. This decouples user load from API rate limits.
 - **No vendor lock-in on odds source**: Abstract odds fetching behind a `OddsProvider` interface so sources can be swapped or added without touching business logic.
 - **Bet logging is self-reported**: OddsIQ does not connect to real sportsbook accounts. Users manually log their bets for PnL tracking.
 - **No real money transactions**: This is an information/analytics tool only.

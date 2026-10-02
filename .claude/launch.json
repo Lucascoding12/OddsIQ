@@ -5,9 +5,16 @@
       "name": "frontend",
       "runtimeExecutable": "pnpm",
       "runtimeArgs": ["dev"],
-      "cwd": "/Users/lucassimon/OddsIQ/frontend",
+      "cwd": "/Users/lucassimon/Desktop/Claude Stuff/OddsIQ/frontend",
       "port": 3000,
       "autoPort": true
+    },
+    {
+      "name": "backend",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": ["-c", "ODDS_SPORTS=americanfootball_nfl uv run uvicorn main:app --port 8000"],
+      "cwd": "/Users/lucassimon/Desktop/Claude Stuff/OddsIQ/backend",
+      "port": 8000
     }
   ]
 }

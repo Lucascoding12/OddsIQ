@@ -22,5 +22,42 @@ class Settings(BaseSettings):
     # allowed via allow_origin_regex in main.py so you don't need to list them.
     cors_origins: list[str] = ["http://localhost:3000", "http://localhost:3001"]
 
+    # ── Poller ───────────────────────────────────────────────────────────────
+    # Odds API cost per sport request = (#markets) × (#regions).
+    # Spreads and totals are where most arbs appear, so they're on by default.
+    odds_markets: str = "h2h,spreads,totals"
+    # "us" covers DK/FD/MGM/Caesars/etc. Adding "us2" (ESPN Bet, Fliff, Hard Rock…)
+    # or "eu"/"uk" finds more arbs but multiplies credit cost.
+    odds_regions: str = "us"
+    # Explicit comma-separated sport keys. Empty → auto-discover in-season
+    # sports via /sports, which is free (costs no credits).
+    odds_sports: str = ""
+    odds_max_sports: int = 8
+    # Stop polling once remaining credits fall to this floor so the key is
+    # never fully drained by the scheduler.
+    odds_credit_reserve: int = 25
+
+    # ── Arb scanner ──────────────────────────────────────────────────────────
+    # Ignore book quotes whose last_update is older than this; 0 disables.
+    arb_max_quote_age_seconds: int = 1800
+    # In-play feeds lag the books by seconds-to-minutes; live "arbs" are
+    # usually phantoms, so they're excluded unless explicitly enabled.
+    arb_include_live: bool = False
+    # Also keep near-misses down to this return (%) so the UI can show
+    # markets that are close to flipping into an arb.
+    arb_near_miss_pct: float = -1.0
+
+    @property
+    def markets_list(self) -> list[str]:
+        return [m.strip() for m in self.odds_markets.split(",") if m.strip()]
+
+    @property
+    def regions_list(self) -> list[str]:
+        return [r.strip() for r in self.odds_regions.split(",") if r.strip()]
+
+    @property
+    def sports_list(self) -> list[str]:
+        return [s.strip() for s in self.odds_sports.split(",") if s.strip()]
+
 
 settings = Settings()

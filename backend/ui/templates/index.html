@@ -1,0 +1,269 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>OddsIQ arbs</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --paper: #E9EDF0;
+  --sheet: #F6F8F9;
+  --ink: #14263A;
+  --muted: #5F6F7E;
+  --rule: #C9D2DA;
+  --profit: #0B7A5F;
+  --profit-wash: #DCEFE8;
+  --risk: #A86B12;
+  --risk-wash: #F5EAD6;
+  --focus: #2F6FB5;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --paper: #0F1C2A;
+    --sheet: #162636;
+    --ink: #E3EAF0;
+    --muted: #8FA0B0;
+    --rule: #26394C;
+    --profit: #3CC79E;
+    --profit-wash: #143B35;
+    --risk: #E0A447;
+    --risk-wash: #3A2E1A;
+    --focus: #7FB2EA;
+  }
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font: 400 17px/1.45 "Barlow Semi Condensed", "Arial Narrow", system-ui, sans-serif;
+  font-variant-numeric: tabular-nums;
+}
+:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+
+.bar {
+  position: sticky; top: 0; z-index: 2;
+  display: flex; flex-wrap: wrap; align-items: end; gap: 12px 20px;
+  padding: 14px 24px;
+  background: var(--sheet);
+  border-bottom: 1px solid var(--rule);
+}
+.bar h1 { margin: 0 auto 0 0; font-size: 24px; font-weight: 700; letter-spacing: -0.01em; align-self: center; }
+.bar h1 .live { display: inline-block; width: 9px; height: 9px; margin-left: 8px; border-radius: 50%; background: var(--muted); vertical-align: middle; }
+.bar h1 .live.on { background: var(--profit); }
+.field { display: grid; gap: 2px; font-size: 14px; color: var(--muted); }
+.field input[type=number] {
+  width: 104px; padding: 6px 8px;
+  font-family: inherit; font-size: 17px; font-weight: 600; color: var(--ink);
+  background: var(--paper); border: 1px solid var(--rule); border-radius: 4px;
+}
+.check { display: flex; gap: 6px; align-items: center; font-size: 15px; color: var(--ink); }
+details.books { font-size: 15px; }
+details.books summary { cursor: pointer; padding: 6px 0; }
+details.books .grid {
+  position: absolute; margin-top: 6px; padding: 12px 14px;
+  display: grid; grid-template-columns: repeat(2, minmax(150px, 1fr)); gap: 4px 16px;
+  background: var(--sheet); border: 1px solid var(--rule); border-radius: 6px;
+  max-height: 60vh; overflow: auto;
+}
+
+main { max-width: 1120px; margin: 0 auto; padding: 18px 24px 64px; }
+#status { color: var(--muted); font-size: 15px; margin-bottom: 18px; }
+.status__err { display: block; color: var(--risk); }
+
+.arb {
+  display: grid; grid-template-columns: 148px 1fr; gap: 20px;
+  padding: 20px 0;
+  border-top: 1px solid var(--rule);
+}
+.arb__pct {
+  font-size: 46px; font-weight: 700; line-height: 1; letter-spacing: -0.02em;
+  color: var(--profit);
+}
+.arb__pct span { font-size: 24px; margin-left: 1px; }
+.arb__head h2 { margin: 0; font-size: 21px; font-weight: 600; line-height: 1.2; }
+.arb__head p { margin: 2px 0 0; color: var(--muted); font-size: 15px; }
+.arb__head .arb__warn { color: var(--risk); }
+.legs { list-style: none; margin: 12px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 10px; }
+.leg {
+  flex: 1 1 230px;
+  display: grid; grid-template-columns: 1fr auto; gap: 2px 12px; align-items: baseline;
+  padding: 10px 12px;
+  background: var(--sheet);
+  border: 1px solid var(--rule);
+  border-left: 4px solid var(--profit);
+  border-radius: 3px;
+}
+.leg__book { font-weight: 700; }
+.leg__odds { font-size: 19px; font-weight: 700; text-align: right; }
+.leg__pick { grid-column: 1 / -1; color: var(--muted); }
+.leg__stake {
+  grid-column: 1 / -1; justify-self: start; margin-top: 6px;
+  padding: 5px 10px;
+  font-family: inherit; font-size: 19px; font-weight: 700; line-height: 1;
+  color: var(--profit); background: var(--profit-wash);
+  border: 0; border-radius: 3px; cursor: copy;
+}
+.leg__stake.copied::after { content: " copied"; font-weight: 500; font-size: 14px; }
+.arb__foot { margin: 10px 0 0; font-size: 15px; color: var(--muted); }
+.arb__foot strong { color: var(--profit); }
+
+.arb--risky .arb__pct, .arb--risky .leg__stake { color: var(--risk); }
+.arb--risky .leg { border-left-color: var(--risk); }
+.arb--risky .arb__foot strong { color: var(--risk); }
+.arb--risky .leg__stake { background: var(--risk-wash); }
+
+.near h3 { margin: 40px 0 0; font-size: 17px; font-weight: 600; color: var(--muted); }
+.arb--near { opacity: 0.62; padding: 12px 0; }
+.arb--near .arb__pct { font-size: 28px; color: var(--muted); }
+.arb--near .arb__pct span { font-size: 16px; }
+.arb--near .leg { border-left-color: var(--rule); }
+.arb--near .leg__stake, .arb--near .arb__foot { display: none; }
+
+.empty { padding: 48px 0; font-size: 19px; color: var(--muted); border-top: 1px solid var(--rule); }
+
+.arb.fresh { animation: fresh 2.4s ease-out; }
+@keyframes fresh { from { background: var(--profit-wash); } to { background: transparent; } }
+@media (prefers-reduced-motion: reduce) { .arb.fresh { animation: none; outline: 2px solid var(--profit); } }
+
+@media (max-width: 680px) {
+  .bar { padding: 12px 16px; }
+  .bar h1 { flex-basis: 100%; }
+  .field input[type=number] { width: 88px; }
+  details.books .grid { grid-template-columns: 1fr; left: 16px; right: 16px; }
+  main { padding: 12px 16px 48px; }
+  .arb { grid-template-columns: 1fr; gap: 8px; }
+  .arb__pct { font-size: 38px; }
+}
+</style>
+</head>
+<body>
+<form class="bar" id="settings" autocomplete="off" onsubmit="return false">
+  <h1>OddsIQ<span class="live" id="live" title="Connection"></span></h1>
+  <label class="field">Total stake ($)<input type="number" name="bankroll" value="100" min="1" step="any"></label>
+  <label class="field">Round stakes to ($)<input type="number" name="round_to" value="1" min="0" step="any"></label>
+  <label class="field">Min profit (%)<input type="number" name="min_profit_pct" value="0" min="0" step="0.1"></label>
+  <details class="books">
+    <summary>Books <span id="book-count">(all)</span></summary>
+    <div class="grid">
+      {% for key, title in books %}
+      <label class="check"><input type="checkbox" name="book" value="{{ key }}" checked> {{ title }}</label>
+      {% else %}
+      <span>Books appear after the first poll.</span>
+      {% endfor %}
+    </div>
+  </details>
+  <label class="check"><input type="checkbox" name="near"> Show near misses</label>
+  <label class="check"><input type="checkbox" name="hide_suspicious"> Hide risky</label>
+  <label class="check"><input type="checkbox" name="alert" checked> Alert on new</label>
+</form>
+
+<main id="board" aria-live="polite"><p class="empty">Connecting…</p></main>
+
+<script>
+const form = document.getElementById("settings");
+const board = document.getElementById("board");
+const live = document.getElementById("live");
+const KEY = "oddsiq.settings";
+let source, known = null;
+
+function load() {
+  try {
+    const s = JSON.parse(localStorage.getItem(KEY) || "{}");
+    for (const [k, v] of Object.entries(s)) {
+      if (k === "book") form.querySelectorAll("[name=book]").forEach(b => b.checked = v.length === 0 || v.includes(b.value));
+      else if (form.elements[k]?.type === "checkbox") form.elements[k].checked = v;
+      else if (form.elements[k]) form.elements[k].value = v;
+    }
+  } catch {}
+}
+
+function query() {
+  const f = form.elements, all = [...form.querySelectorAll("[name=book]")];
+  const picked = all.filter(b => b.checked).map(b => b.value);
+  const s = {
+    bankroll: f.bankroll.value, round_to: f.round_to.value, min_profit_pct: f.min_profit_pct.value,
+    near: f.near.checked, hide_suspicious: f.hide_suspicious.checked, alert: f.alert.checked,
+    book: picked.length === all.length ? [] : picked,
+  };
+  try { localStorage.setItem(KEY, JSON.stringify(s)); } catch {}
+  document.getElementById("book-count").textContent = s.book.length ? `(${s.book.length})` : "(all)";
+  const p = new URLSearchParams({
+    bankroll: s.bankroll || 100, round_to: s.round_to || 0,
+    min_profit_pct: s.near ? -1 : (s.min_profit_pct || 0),
+    hide_suspicious: s.hide_suspicious,
+  });
+  if (s.book.length) p.set("books", s.book.join(","));
+  return p;
+}
+
+function connect() {
+  source?.close();
+  known = null;
+  source = new EventSource("/ui/stream?" + query());
+  source.addEventListener("board", e => { render(e.data); live.classList.add("on"); });
+  source.onerror = () => live.classList.remove("on");
+}
+
+function render(html) {
+  board.innerHTML = html;
+  const rows = [...board.querySelectorAll(".arb:not(.arb--near)")];
+  const ids = new Set(rows.map(r => r.dataset.id));
+  if (known) {
+    const fresh = rows.filter(r => !known.has(r.dataset.id));
+    fresh.forEach(r => r.classList.add("fresh"));
+    if (fresh.length && form.elements.alert.checked) alertNew(fresh.length);
+  }
+  known = ids;
+  document.title = ids.size ? `(${ids.size}) OddsIQ arbs` : "OddsIQ arbs";
+  tick();
+}
+
+function alertNew(n) {
+  try {
+    const ctx = new AudioContext(), osc = ctx.createOscillator(), gain = ctx.createGain();
+    osc.frequency.value = 880; gain.gain.value = 0.08;
+    osc.connect(gain).connect(ctx.destination); osc.start(); osc.stop(ctx.currentTime + 0.18);
+  } catch {}
+  if ("Notification" in window && Notification.permission === "granted" && document.hidden)
+    new Notification(`${n} new arb${n > 1 ? "s" : ""}`, { body: "OddsIQ found a guaranteed-profit line." });
+}
+
+function ago(iso) {
+  const s = Math.max(0, (Date.now() - Date.parse(iso)) / 1000);
+  if (s < 60) return `${Math.floor(s)}s`;
+  if (s < 3600) return `${Math.floor(s / 60)}m`;
+  return `${Math.floor(s / 3600)}h ${Math.floor(s % 3600 / 60)}m`;
+}
+
+function tick() {
+  board.querySelectorAll("time[data-age]").forEach(t => t.textContent = ago(t.dataset.age));
+  board.querySelectorAll("time[data-local]:not([data-done])").forEach(t => {
+    t.textContent = new Date(t.dataset.local).toLocaleString([], { weekday: "short", hour: "numeric", minute: "2-digit" });
+    t.dataset.done = 1;
+  });
+}
+
+board.addEventListener("click", async e => {
+  const btn = e.target.closest("[data-copy]");
+  if (!btn) return;
+  try { await navigator.clipboard.writeText(btn.dataset.copy); } catch { return; }
+  btn.classList.add("copied");
+  setTimeout(() => btn.classList.remove("copied"), 1200);
+});
+
+let debounce;
+form.addEventListener("input", () => { clearTimeout(debounce); debounce = setTimeout(connect, 350); });
+form.elements.alert.addEventListener("change", e => {
+  if (e.target.checked && "Notification" in window && Notification.permission === "default") Notification.requestPermission();
+});
+
+load();
+connect();
+setInterval(tick, 1000);
+</script>
+</body>
+</html>

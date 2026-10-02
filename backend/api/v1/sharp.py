@@ -1,7 +1,7 @@
 """
 Sharp metrics endpoints.
 
-Derives signals from live odds in Redis:
+Derives signals from the live in-memory odds snapshot:
 
 1. /sharp/line-movement
    - For each game, compares best odds vs worst odds per outcome across books.
@@ -17,26 +17,17 @@ Derives signals from live odds in Redis:
 
 True open-to-close CLV requires storing historical snapshots (OddsSnapshot table).
 That's populated once the poller writes to Postgres (Phase 2 of the plan).
-For now, consensus and disparity are computed live from Redis.
+For now, consensus and disparity are computed from the live snapshot.
 """
 import statistics
 from fastapi import APIRouter, Response
 
-from services import odds_cache
+from services.odds_math import implied_prob
+from services.odds_store import store
 
 router = APIRouter(tags=["sharp"])
 
-CACHE_CONTROL = "public, max-age=30"
-
-
-def american_to_decimal(odds: float) -> float:
-    if odds > 0:
-        return odds / 100 + 1
-    return 100 / abs(odds) + 1
-
-
-def implied_prob(odds: float) -> float:
-    return 1 / american_to_decimal(odds)
+CACHE_CONTROL = "public, max-age=5"
 
 
 def no_vig_prob(odds_a: float, odds_b: float) -> tuple[float, float]:
@@ -115,7 +106,7 @@ async def get_line_movement(response: Response, limit: int = 30):
     Sorted by disparity (largest spread between best and worst odds per outcome).
     Acts as a proxy for line movement and steam detection.
     """
-    results = await odds_cache.get_derived("odds:all", "line-movement", _compute_line_movement)
+    results = store.memo("line-movement", lambda: _compute_line_movement(store.games))
     response.headers["Cache-Control"] = CACHE_CONTROL
     return (results or [])[:limit]
 
@@ -175,6 +166,6 @@ async def get_no_vig_odds(response: Response, limit: int = 30):
     Return no-vig (fair) odds for each game by removing the bookmaker margin.
     Useful for identifying when a book's price is above or below the true line.
     """
-    results = await odds_cache.get_derived("odds:all", "no-vig", _compute_no_vig)
+    results = store.memo("no-vig", lambda: _compute_no_vig(store.games))
     response.headers["Cache-Control"] = CACHE_CONTROL
     return (results or [])[:limit]
